@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Confetti from 'react-confetti'
 import { motion } from 'framer-motion'
 import AmbientMotionLayer from './AmbientMotionLayer'
@@ -7,6 +7,7 @@ import ConfirmationModal from './ConfirmationModal'
 import ProductivityRain from './ProductivityRain'
 import ThemeVideoBackground from './ThemeVideoBackground'
 import TimerCircle from './TimerCircle'
+import { watchGroupSessions } from '../services/groupService'
 import { usePomodoroStore } from '../store/usePomodoroStore'
 
 function SessionView() {
@@ -17,6 +18,9 @@ function SessionView() {
   const motivationLine = usePomodoroStore((state) => state.motivationLine)
   const streak = usePomodoroStore((state) => state.streak)
   const xp = usePomodoroStore((state) => state.xp)
+  const sessionMode = usePomodoroStore((state) => state.sessionMode)
+  const currentGroupId = usePomodoroStore((state) => state.currentGroupId)
+  const userProfile = usePomodoroStore((state) => state.userProfile)
   const showCompletion = usePomodoroStore((state) => state.showCompletion)
   const pauseSession = usePomodoroStore((state) => state.pauseSession)
   const resumeSession = usePomodoroStore((state) => state.resumeSession)
@@ -24,9 +28,42 @@ function SessionView() {
   const closeCompletion = usePomodoroStore((state) => state.closeCompletion)
 
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [activeUsers, setActiveUsers] = useState([])
 
   const progressLabel = useMemo(() => `${Math.round(progress * 100)}%`, [progress])
   const themeClass = `theme-${selectedSound}`
+
+  useEffect(() => {
+    if (sessionMode !== 'group' || !currentGroupId) {
+      setActiveUsers([])
+      return undefined
+    }
+
+    let unsubscribe = () => {}
+
+    try {
+      unsubscribe = watchGroupSessions(
+        currentGroupId,
+        (rows) => {
+          const active = rows
+            .filter((row) => row.status === 'running')
+            .map((row) => ({ userId: row.userId, username: row.username }))
+
+          const uniqueUsers = Array.from(new Map(active.map((user) => [user.userId, user])).values())
+          setActiveUsers(uniqueUsers)
+        },
+        (error) => console.error(error),
+      )
+    } catch (error) {
+      console.error(error)
+      setActiveUsers([])
+    }
+
+    return () => unsubscribe()
+  }, [currentGroupId, sessionMode])
+
+  const activeCount = activeUsers.length
+  const currentUserActive = activeUsers.some((user) => user.userId === userProfile.id)
 
   const handleTryQuit = () => {
     if (status === 'completed') {
@@ -94,6 +131,14 @@ function SessionView() {
             >
               {motivationLine}
             </motion.p>
+
+            {sessionMode === 'group' && (
+              <div className="mt-3 rounded-2xl border border-emerald-200/20 bg-emerald-300/8 px-3 py-2 text-sm text-emerald-100">
+                <p>{activeCount} people focusing right now.</p>
+                {!currentUserActive && <p className="mt-1 text-amber-100">{userProfile.username} is warming up...</p>}
+                {activeCount >= 2 && <p className="mt-1">Most people in your group are still going.</p>}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-1 items-center justify-center py-2 md:py-3">

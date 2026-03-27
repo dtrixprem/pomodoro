@@ -2,6 +2,7 @@ import { usePomodoroStore } from '../store/usePomodoroStore'
 
 function LandingScreen() {
   const goToSetup = usePomodoroStore((state) => state.goToSetup)
+  const goToGroupDashboard = usePomodoroStore((state) => state.goToGroupDashboard)
   const backgroundImage = `url('${import.meta.env.BASE_URL}images/bgimg.png')`
 
   return (
@@ -18,13 +19,22 @@ function LandingScreen() {
         </p>
         <p className="mt-2 text-sm text-white/75">One session can change your day.</p>
         <p className="mt-1 text-sm text-white/75">You showed up. That matters.</p>
-        <button
-          type="button"
-          onClick={goToSetup}
-          className="cta-button mt-8 text-sm tracking-wide"
-        >
-          Start Session
-        </button>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={goToSetup}
+            className="cta-button text-sm tracking-wide"
+          >
+            Start Session
+          </button>
+          <button
+            type="button"
+            onClick={goToGroupDashboard}
+            className="glass-button text-sm tracking-wide"
+          >
+            Group Dashboard
+          </button>
+        </div>
       </div>
     </section>
   )

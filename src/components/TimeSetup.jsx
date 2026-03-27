@@ -7,11 +7,13 @@ const PRESETS = [25, 40, 60]
 
 function TimeSetup() {
   const durationMinutes = usePomodoroStore((state) => state.durationMinutes)
+  const currentGroupId = usePomodoroStore((state) => state.currentGroupId)
   const setDurationMinutes = usePomodoroStore((state) => state.setDurationMinutes)
   const startSession = usePomodoroStore((state) => state.startSession)
+  const goToGroupDashboard = usePomodoroStore((state) => state.goToGroupDashboard)
   const selectedSound = usePomodoroStore((state) => state.selectedSound)
 
-  const handleStartSession = async () => {
+  const handleStartSession = async (mode = 'solo') => {
     // Explicitly resume the WebAudio context after user click (browser autoplay policy).
     try {
       if (Howler.ctx?.state !== 'running') {
@@ -23,7 +25,7 @@ function TimeSetup() {
     }
 
     console.log('[timer] start clicked: starting timer + ambient + bg music')
-    startSession()
+    await startSession({ mode, groupId: currentGroupId })
   }
 
   return (
@@ -74,13 +76,36 @@ function TimeSetup() {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={handleStartSession}
-            className="cta-button mt-8 text-sm"
-          >
-            Begin Focus Session
-          </button>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => handleStartSession('solo')}
+              className="cta-button text-sm"
+            >
+              Start Solo
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStartSession('group')}
+              disabled={!currentGroupId}
+              className="glass-button text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Start Group Session
+            </button>
+          </div>
+
+          {!currentGroupId && (
+            <div className="mt-4 rounded-2xl border border-white/15 bg-black/20 p-3">
+              <p className="text-sm text-white/80">Join or create a study group to sync sessions.</p>
+              <button
+                type="button"
+                onClick={goToGroupDashboard}
+                className="glass-button mt-2 text-xs"
+              >
+                Open Group Dashboard
+              </button>
+            </div>
+          )}
         </div>
 
         <SoundSelector />

@@ -3,12 +3,33 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { MOTIVATION_LINES } from '../constants/motivation'
 import { AMBIENT_SOUNDS } from '../constants/sounds'
 import { STAGE } from '../constants/stages'
+import {
+  completeGroupSession,
+  createGroup,
+  getInviteLink,
+  joinGroup,
+  startGroupSession,
+  upsertUserProfile,
+} from '../services/groupService'
 import { clampProgress, getStageByProgress } from '../utils/stage'
 import { secondsFromMinutes } from '../utils/time'
 
 const DEFAULT_MINUTES = 25
 const DAY_MS = 24 * 60 * 60 * 1000
 const DEFAULT_SOUND_ID = 'rain'
+
+const DEFAULT_USERNAME_PREFIX = 'Focus'
+
+const createUserId = () => {
+  if (typeof crypto?.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  const fallback = Math.floor(Math.random() * 100000)
+  return `user_${Date.now()}_${fallback}`
+}
+
+const defaultUsername = () => `${DEFAULT_USERNAME_PREFIX}${Math.floor(100 + Math.random() * 900)}`
 
 const sanitizeSoundId = (soundId) => {
   if (AMBIENT_SOUNDS.some((sound) => sound.id === soundId)) {
@@ -51,6 +72,18 @@ export const usePomodoroStore = create(
   persist(
     (set, get) => ({
       activeView: 'landing',
+      userProfile: {
+        id: createUserId(),
+        username: defaultUsername(),
+      },
+      currentGroupId: '',
+      currentGroupName: '',
+      inviteLink: '',
+      collaborationError: '',
+      collaborationStatus: 'idle',
+      sessionMode: 'solo',
+      currentGroupSessionId: '',
+      groupActiveUsers: [],
       durationMinutes: DEFAULT_MINUTES,
       totalSeconds: secondsFromMinutes(DEFAULT_MINUTES),
       remainingSeconds: secondsFromMinutes(DEFAULT_MINUTES),
@@ -68,7 +101,109 @@ export const usePomodoroStore = create(
       lastTickAt: null,
       showCompletion: false,
 
+      setUsername: async (username) => {
+        const nextUsername = String(username || '').trim().slice(0, 24)
+        if (!nextUsername) return
+
+        const { userProfile } = get()
+        const nextUser = {
+          ...userProfile,
+          username: nextUsername,
+        }
+
+        set({ userProfile: nextUser, collaborationError: '' })
+
+        try {
+          await upsertUserProfile(nextUser)
+        } catch (error) {
+          set({ collaborationError: error?.message || 'Could not sync profile yet.' })
+        }
+      },
+
+      bootstrapUserProfile: async () => {
+        const { userProfile } = get()
+
+        if (!userProfile?.id) {
+          set({
+            userProfile: {
+              id: createUserId(),
+              username: defaultUsername(),
+            },
+          })
+        }
+
+        try {
+          await upsertUserProfile(get().userProfile)
+        } catch (error) {
+          set({ collaborationError: error?.message || 'Firebase profile sync is pending.' })
+        }
+      },
+
+      goToLanding: () => set({ activeView: 'landing' }),
+
       goToSetup: () => set({ activeView: 'setup' }),
+
+      goToGroupDashboard: () => set({ activeView: 'group' }),
+
+      setGroupActiveUsers: (activeUsers) => set({ groupActiveUsers: activeUsers }),
+
+      createStudyGroup: async (groupName) => {
+        const trimmedName = String(groupName || '').trim().slice(0, 40)
+        if (!trimmedName) return null
+
+        const { userProfile } = get()
+        set({ collaborationStatus: 'working', collaborationError: '' })
+
+        try {
+          const result = await createGroup({ name: trimmedName, admin: userProfile })
+          set({
+            currentGroupId: result.id,
+            currentGroupName: trimmedName,
+            inviteLink: result.inviteLink,
+            activeView: 'group',
+            collaborationStatus: 'success',
+          })
+          return result
+        } catch (error) {
+          set({
+            collaborationStatus: 'error',
+            collaborationError: error?.message || 'Could not create group.',
+          })
+          return null
+        }
+      },
+
+      joinStudyGroup: async (groupCodeOrLink) => {
+        const rawValue = String(groupCodeOrLink || '').trim()
+        if (!rawValue) return null
+
+        const resolvedCode = rawValue.includes('group=')
+          ? new URL(rawValue, window.location.origin).searchParams.get('group') || ''
+          : rawValue
+
+        const groupId = resolvedCode.toUpperCase()
+        if (!groupId) return null
+
+        const { userProfile } = get()
+        set({ collaborationStatus: 'working', collaborationError: '' })
+
+        try {
+          await joinGroup({ groupId, user: userProfile })
+          set({
+            currentGroupId: groupId,
+            inviteLink: getInviteLink(groupId),
+            activeView: 'group',
+            collaborationStatus: 'success',
+          })
+          return groupId
+        } catch (error) {
+          set({
+            collaborationStatus: 'error',
+            collaborationError: error?.message || 'Could not join group.',
+          })
+          return null
+        }
+      },
 
       setDurationMinutes: (minutes) => {
         const safeMinutes = Number.isFinite(minutes)
@@ -91,8 +226,23 @@ export const usePomodoroStore = create(
       toggleBackgroundMusic: () => set((state) => ({ bgMusicEnabled: !state.bgMusicEnabled })),
       setVolume: (value) => set({ volume: Math.min(0.6, Math.max(0.4, value)) }),
 
-      startSession: () => {
-        const { totalSeconds } = get()
+      startSession: async ({ mode = 'solo', groupId = '' } = {}) => {
+        const { totalSeconds, durationMinutes, currentGroupId, userProfile } = get()
+        const resolvedGroupId = groupId || currentGroupId
+        let groupSessionId = ''
+
+        if (mode === 'group' && resolvedGroupId) {
+          try {
+            groupSessionId = await startGroupSession({
+              groupId: resolvedGroupId,
+              user: userProfile,
+              durationMinutes,
+            })
+          } catch (error) {
+            set({ collaborationError: error?.message || 'Could not start group session.' })
+          }
+        }
+
         set({
           activeView: 'session',
           status: 'running',
@@ -102,6 +252,8 @@ export const usePomodoroStore = create(
           motivationLine: pickRandomLine(STAGE.IGNITION),
           lastTickAt: Date.now(),
           showCompletion: false,
+          sessionMode: mode,
+          currentGroupSessionId: groupSessionId,
         })
       },
 
@@ -124,15 +276,29 @@ export const usePomodoroStore = create(
           motivationLine: pickRandomLine(STAGE.IGNITION),
           lastTickAt: null,
           showCompletion: false,
+          sessionMode: 'solo',
+          currentGroupSessionId: '',
         })
       },
 
       closeCompletion: () => set({ showCompletion: false }),
 
       completeSession: () => {
+        let sessionPayload = null
+
         set((state) => {
           const streak = getStreakUpdate(state.lastCompletedAt, state.streak)
-          const earnedXp = state.durationMinutes * 10
+          const streakBonus = Math.max(0, streak - 1) * 5
+          const earnedXp = 25 + streakBonus
+
+          sessionPayload = {
+            mode: state.sessionMode,
+            groupId: state.currentGroupId,
+            sessionId: state.currentGroupSessionId,
+            durationMinutes: state.durationMinutes,
+            user: state.userProfile,
+            earnedXp,
+          }
 
           return {
             status: 'completed',
@@ -147,6 +313,23 @@ export const usePomodoroStore = create(
             lastCompletedAt: new Date().toISOString(),
           }
         })
+
+        if (
+          sessionPayload &&
+          sessionPayload.mode === 'group' &&
+          sessionPayload.groupId &&
+          sessionPayload.sessionId
+        ) {
+          completeGroupSession({
+            groupId: sessionPayload.groupId,
+            sessionId: sessionPayload.sessionId,
+            user: sessionPayload.user,
+            durationMinutes: sessionPayload.durationMinutes,
+            xpEarned: sessionPayload.earnedXp,
+          }).catch((error) => {
+            set({ collaborationError: error?.message || 'Could not sync group leaderboard update.' })
+          })
+        }
       },
 
       tick: (deltaSeconds = 1) => {
@@ -204,6 +387,14 @@ export const usePomodoroStore = create(
         motivationLine: state.motivationLine,
         lastTickAt: state.lastTickAt,
         showCompletion: state.showCompletion,
+        userProfile: state.userProfile,
+        currentGroupId: state.currentGroupId,
+        currentGroupName: state.currentGroupName,
+        inviteLink: state.inviteLink,
+        collaborationError: state.collaborationError,
+        collaborationStatus: state.collaborationStatus,
+        sessionMode: state.sessionMode,
+        currentGroupSessionId: state.currentGroupSessionId,
       }),
     },
   ),
