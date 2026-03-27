@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #fff;
+  background: #10141a;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.glass-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(40px);
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.stage-ignition {
+  --stage-ring: rgb(225 159 241);
+  --stage-glow: rgba(225, 159, 241, 0.22);
+}
+
+.stage-flow {
+  --stage-ring: rgb(130 198 250);
+  --stage-glow: rgba(130, 198, 250, 0.2);
+}
+
+.stage-final {
+  --stage-ring: rgb(255 167 157);
+  --stage-glow: rgba(255, 167, 157, 0.25);
+}
+
+.animated-gradient {
+  background: linear-gradient(-45deg, #111725, #1b2440, #1d2c4c, #251a36);
+  background-size: 300% 300%;
+  animation: shift 14s ease infinite;
+}
+
+.theme-rain {
+  --accent: #b9a3ff;
+  --accent-2: #8ca8ff;
+  --accent-soft: rgba(140, 168, 255, 0.3);
+}
+
+.theme-fire {
+  --accent: #c7acff;
+  --accent-2: #96aef7;
+  --accent-soft: rgba(151, 174, 247, 0.3);
+}
+
+.theme-ocean {
+  --accent: #adbcff;
+  --accent-2: #90a8ff;
+  --accent-soft: rgba(144, 168, 255, 0.3);
+}
+
+.theme-forest {
+  --accent: #b8a8ff;
+  --accent-2: #8aa0e8;
+  --accent-soft: rgba(138, 160, 232, 0.3);
+}
+
+.theme-night {
+  --accent: #c2a8ff;
+  --accent-2: #788fd8;
+  --accent-soft: rgba(120, 143, 216, 0.32);
+}
+
+.glass-button {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  color: #fff;
+  font-weight: 600;
+  backdrop-filter: blur(24px);
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.glass-button:active {
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.3);
+}
+
+.cta-button {
+  border-radius: 9999px;
+  padding: 0.62rem 1.5rem;
+  font-weight: 700;
+  color: #0d1216;
+  background: linear-gradient(to right, #c7b2ff, #8fa7f2);
+  box-shadow: 0 8px 24px rgba(143, 167, 242, 0.24);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.cta-button:hover {
+  transform: scale(1.05);
+  filter: brightness(1.05);
+}
+
+@keyframes shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
