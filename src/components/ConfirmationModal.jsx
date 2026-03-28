@@ -20,19 +20,19 @@ function ConfirmationModal({ open, progressLabel, onContinue, onQuit }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-lg"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-lg"
         >
           <motion.div
             initial={{ scale: 0.95, y: 15 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 12 }}
-            className="glass-panel w-full max-w-md space-y-4 rounded-xl p-6"
+            className="glass-panel w-full max-w-md space-y-4 rounded-xl p-5 sm:p-6"
           >
-            <h3 className="text-xl font-semibold text-center leading-relaxed text-white">You're already {progressLabel} in.</h3>
+            <h3 className="text-lg font-semibold text-center leading-relaxed text-white sm:text-xl">You're already {progressLabel} in.</h3>
             <p className="text-sm text-center leading-relaxed text-white">
               {warningLine}
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={onContinue}

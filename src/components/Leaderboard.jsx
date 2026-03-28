@@ -1,12 +1,12 @@
 function Leaderboard({ rows, title }) {
   return (
-    <div className="glass-panel rounded-3xl p-6">
-      <h3 className="text-xl font-semibold text-white">{title}</h3>
+    <div className="glass-panel rounded-3xl p-4 sm:p-6">
+      <h3 className="text-lg font-semibold text-white sm:text-xl">{title}</h3>
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-white/70">No focus sessions in this period yet.</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[420px] border-collapse text-left text-sm">
+          <table className="w-full min-w-115 border-collapse text-left text-sm">
             <thead>
               <tr className="text-white/70">
                 <th className="pb-2 pr-4">Rank</th>

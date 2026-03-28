@@ -26,7 +26,7 @@ function App() {
   }, [joinStudyGroup])
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
+    <main className="relative min-h-screen overflow-x-hidden">
       <div className="min-h-screen">
         {activeView === 'setup' && <TimeSetup />}
         {activeView === 'session' && <SessionView />}

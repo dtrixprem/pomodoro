@@ -161,9 +161,9 @@ function GroupPage() {
   }
 
   return (
-    <section className="theme-rain animated-gradient min-h-screen px-4 py-6 md:px-6 md:py-8">
-      <div className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-3">
-        <div className="glass-panel rounded-3xl p-5 md:col-span-1">
+    <section className="theme-rain animated-gradient min-h-screen px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-12 lg:gap-5">
+        <div className="glass-panel rounded-3xl p-4 sm:p-5 lg:col-span-4">
           <h2 className="text-2xl font-semibold text-white">Group Dashboard</h2>
           <p className="mt-1 text-sm text-white/75">Collaborative focus with live accountability.</p>
 
@@ -175,7 +175,7 @@ function GroupPage() {
               className="w-full rounded-xl border border-white/20 bg-black/20 px-3 py-2 text-white"
               placeholder="Enter your name"
             />
-            <button type="submit" className="glass-button text-sm">
+            <button type="submit" className="glass-button w-full text-sm sm:w-auto">
               Save Name
             </button>
           </form>
@@ -191,7 +191,7 @@ function GroupPage() {
             <button
               type="submit"
               disabled={!hasName || Boolean(loading)}
-              className="glass-button flex items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
+              className="glass-button flex w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
             >
               {loading === 'create' && <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
               {loading === 'create' ? 'Creating...' : 'Create Group'}
@@ -209,7 +209,7 @@ function GroupPage() {
             <button
               type="submit"
               disabled={!hasName || Boolean(loading)}
-              className="glass-button flex items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
+              className="glass-button flex w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
             >
               {loading === 'join' && <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
               {loading === 'join' ? 'Joining...' : 'Join'}
@@ -245,12 +245,12 @@ function GroupPage() {
           </div>
         </div>
 
-        <div className="space-y-4 md:col-span-2">
-          <div className="glass-panel rounded-3xl p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-4 lg:col-span-8">
+          <div className="glass-panel rounded-3xl p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-white/70">Current Group</p>
-                <h3 className="text-2xl font-semibold text-white">
+                <h3 className="text-xl font-semibold text-white sm:text-2xl">
                   {groupData?.name || (currentGroupId ? currentGroupId : 'No group selected')}
                 </h3>
                 {currentGroupId && <p className="mt-1 text-sm text-white/75">Code: {currentGroupId}</p>}
@@ -258,7 +258,7 @@ function GroupPage() {
 
               <button
                 type="button"
-                className="cta-button flex items-center gap-2 text-sm"
+                className="cta-button flex w-full items-center justify-center gap-2 text-sm sm:w-auto"
                 disabled={!hasName || !currentGroupId || Boolean(loading)}
                 onClick={handleStartGroupSession}
               >
@@ -273,7 +273,7 @@ function GroupPage() {
             )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-2">
             <MemberList members={members} activeUsers={activeUsers} />
 
             <div className="glass-panel rounded-3xl p-6">

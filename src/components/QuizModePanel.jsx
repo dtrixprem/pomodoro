@@ -117,7 +117,7 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
   }
 
   return (
-    <div className={`overflow-hidden rounded-2xl border border-white/15 bg-black/20 p-4 ${className}`.trim()}>
+    <div className={`overflow-hidden rounded-2xl border border-white/15 bg-black/20 p-3 sm:p-4 ${className}`.trim()}>
       <div className="mb-4 flex items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-white/75">Quiz</p>
         <span className={`rounded-full px-2 py-1 text-[10px] ${isActive ? 'bg-emerald-300/20 text-emerald-100' : 'bg-white/10 text-white/65'}`}>
@@ -215,7 +215,7 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
             <p className="mb-2 text-[11px] uppercase tracking-wide text-white/60">Participant Results</p>
             <div className="space-y-2">
               {participantResults.map((row) => (
-                <div key={row.userId} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs text-white">
+                <div key={row.userId} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs text-white sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <span className="truncate text-white/85">{row.name}</span>
                   <span className="whitespace-nowrap text-emerald-100">{row.correct} correct</span>
                   <span className="whitespace-nowrap text-rose-100">{row.wrong} wrong</span>

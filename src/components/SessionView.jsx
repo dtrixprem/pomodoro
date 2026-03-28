@@ -188,7 +188,7 @@ const ChatMessageItem = memo(function ChatMessageItem({ message, currentUserId, 
 
   return (
     <div className={`flex min-w-0 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex max-w-[75%] items-start gap-2 ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex max-w-[82%] items-start gap-2 sm:max-w-[75%] ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
           {initialsFromName(message.name || message.username || '')}
         </div>
@@ -304,7 +304,7 @@ const ChatMessagesList = memo(function ChatMessagesList({ messages, currentUserI
 
 const LeftCollabPanel = memo(function LeftCollabPanel({ groupId, quizState, isCreator, currentUser, activeUsers }) {
   return (
-    <aside className="glass-panel h-full min-h-0 w-72 rounded-3xl border border-white/15 bg-black/25">
+    <aside className="glass-panel h-full min-h-0 w-[20rem] rounded-3xl border border-white/15 bg-black/25 2xl:w-88">
       <div className="flex h-full flex-col p-4 gap-5">
         <div className="flex-1">
           <QuizModePanel
@@ -352,7 +352,7 @@ const GroupSidePanel = memo(function GroupSidePanel({
   return (
     <aside
       className={`glass-panel flex h-full min-h-0 flex-col rounded-3xl bg-black/25 ${
-        mobile ? 'w-full p-4' : 'w-70 p-4 md:w-80'
+        mobile ? 'w-full p-3 sm:p-4' : 'w-[20rem] p-4 xl:w-88'
       }`}
     >
       <div className="flex h-full min-h-0 flex-col gap-4">
@@ -864,7 +864,7 @@ function SessionView() {
   }
 
   return (
-    <section className={`theme-${selectedSound} relative h-screen overflow-hidden bg-cover bg-center`}>
+    <section className={`theme-${selectedSound} relative min-h-dvh overflow-x-hidden bg-cover bg-center`}>
       <ThemeVideoBackground themeId={selectedSound} overlayClassName="bg-black/55 backdrop-blur-sm" />
 
       {showCompletion && (
@@ -881,11 +881,11 @@ function SessionView() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative z-10 h-screen overflow-hidden px-4 py-4 md:px-6 md:py-5"
+        className="relative z-10 min-h-dvh px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-5 lg:h-dvh lg:overflow-hidden"
       >
-        <div className="mx-auto flex h-full w-full max-w-345 gap-4 overflow-hidden">
+        <div className="mx-auto flex min-h-full w-full max-w-440 gap-3 lg:h-full lg:gap-4 lg:overflow-hidden xl:gap-5">
           {isGroupSession && (
-            <div className="hidden h-full min-h-0 md:block">
+            <div className="hidden h-full min-h-0 xl:block">
               <LeftCollabPanel
                 groupId={currentGroupId}
                 quizState={quizState}
@@ -896,8 +896,8 @@ function SessionView() {
             </div>
           )}
 
-          <div className="flex min-w-0 flex-1 flex-col justify-between overflow-hidden">
-            <div className="glass-panel shrink-0 rounded-3xl border border-white/15 px-5 py-4 shadow-lg md:px-6 md:py-5">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 lg:justify-between lg:gap-0 lg:overflow-hidden">
+            <div className="glass-panel shrink-0 rounded-3xl border border-white/15 px-4 py-3 shadow-lg sm:px-5 sm:py-4 md:px-6 md:py-5">
               <p className="text-xs uppercase tracking-wide text-purple-200">Progress</p>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/20">
@@ -916,7 +916,7 @@ function SessionView() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
-                className="mt-3 text-center text-lg leading-relaxed text-white md:text-xl"
+                className="mt-3 text-center text-base leading-relaxed text-white sm:text-lg md:text-xl"
               >
                 {motivationLine}
               </motion.p>
@@ -930,7 +930,7 @@ function SessionView() {
               )}
             </div>
 
-            <div className="flex flex-1 items-center justify-center py-2 md:py-3">
+            <div className="flex flex-1 items-center justify-center py-1.5 sm:py-2 md:py-3">
               <TimerCircle
                 remainingSeconds={remainingSeconds}
                 progress={progress}
@@ -939,7 +939,7 @@ function SessionView() {
               />
             </div>
 
-            <div className="glass-panel shrink-0 rounded-3xl border border-white/10 px-4 py-3 shadow-lg md:px-6 md:py-4">
+            <div className="glass-panel shrink-0 rounded-3xl border border-white/10 px-3 py-3 shadow-lg sm:px-4 md:px-6 md:py-4">
               <div className="flex flex-wrap items-center justify-center gap-2.5 md:gap-3">
                 {status === 'running' ? (
                   <button
@@ -981,7 +981,7 @@ function SessionView() {
                   <button
                     type="button"
                     onClick={() => setMobilePanelOpen(true)}
-                    className="glass-button text-sm md:hidden"
+                    className="glass-button text-sm lg:hidden"
                   >
                     Open Group Panel
                   </button>
@@ -991,7 +991,7 @@ function SessionView() {
           </div>
 
           {isGroupSession && (
-            <div className="hidden h-full min-h-0 md:block">
+            <div className="hidden h-full min-h-0 lg:block">
               <GroupSidePanel
                 groupName={groupData?.name}
                 inviteCode={inviteCode}
@@ -1023,14 +1023,14 @@ function SessionView() {
       </motion.div>
 
       {isGroupSession && mobilePanelOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-black/60"
             onClick={() => setMobilePanelOpen(false)}
             aria-label="Close group panel"
           />
-          <div className="absolute bottom-0 left-0 right-0 h-[74vh] rounded-t-3xl p-3">
+          <div className="absolute bottom-0 left-0 right-0 h-[82dvh] rounded-t-3xl p-2.5 sm:h-[78dvh] sm:p-3">
             <GroupSidePanel
               mobile
               groupName={groupData?.name}

@@ -21,15 +21,15 @@ function CompletionModal({ open, streak, xp, onClose, onStartAnother }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 sm:p-6 backdrop-blur-sm"
         >
           <motion.div
             initial={{ y: 16, scale: 0.94 }}
             animate={{ y: 0, scale: 1 }}
             exit={{ y: 10, scale: 0.95 }}
-            className="glass-panel w-full max-w-lg rounded-3xl p-7"
+            className="glass-panel w-full max-w-lg rounded-3xl p-5 sm:p-7"
           >
-            <h3 className="text-2xl font-semibold text-center leading-relaxed text-white">{messageLine}</h3>
+            <h3 className="text-xl font-semibold text-center leading-relaxed text-white sm:text-2xl">{messageLine}</h3>
             <p className="mt-3 text-sm text-center leading-relaxed text-white">This is how progress is built.</p>
 
             <div className="mt-6 grid grid-cols-2 gap-3 text-center">
@@ -43,7 +43,7 @@ function CompletionModal({ open, streak, xp, onClose, onStartAnother }) {
               </div>
             </div>
 
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={onStartAnother}

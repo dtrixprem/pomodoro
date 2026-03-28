@@ -82,7 +82,7 @@ function TimeSetup() {
 
   return (
     <section
-      className={`theme-${selectedSound} relative flex h-screen items-center justify-center overflow-hidden bg-cover bg-center px-6 py-10`}
+      className={`theme-${selectedSound} relative flex min-h-dvh items-start justify-center overflow-x-hidden overflow-y-auto bg-cover bg-center px-3 py-4 sm:px-5 sm:py-8 lg:items-center`}
       style={{ backgroundImage }}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -94,19 +94,19 @@ function TimeSetup() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 grid w-full max-w-6xl gap-5 md:grid-cols-2"
+        className="relative z-10 grid w-full max-w-7xl gap-4 md:grid-cols-2 md:gap-5 lg:gap-6"
       >
-        <div className="glass-panel rounded-3xl p-8">
-          <h2 className="text-3xl font-semibold text-purple-200">Set your focus time</h2>
+        <div className="glass-panel rounded-3xl p-4 sm:p-6 lg:p-8">
+          <h2 className="text-2xl font-semibold text-purple-200 sm:text-3xl">Set your focus time</h2>
           <p className="mt-2 text-sm text-white/75">Choose a preset or fine-tune with the slider.</p>
 
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-2.5 sm:gap-3">
             {PRESETS.map((preset) => (
               <button
                 key={preset}
                 type="button"
                 onClick={() => setDurationMinutes(preset)}
-                className={`glass-button text-sm ${
+                className={`glass-button min-w-23 text-sm ${
                   durationMinutes === preset
                     ? 'border-white/35 bg-white/16 shadow-[0_0_14px_var(--accent-soft)]'
                     : 'text-white/85'
@@ -138,8 +138,8 @@ function TimeSetup() {
           </div>
         </div>
 
-        <div className="glass-panel rounded-3xl p-8">
-          <h3 className="text-2xl font-semibold text-white">Session Type</h3>
+        <div className="glass-panel rounded-3xl p-4 sm:p-6 lg:p-8">
+          <h3 className="text-xl font-semibold text-white sm:text-2xl">Session Type</h3>
           <p className="mt-2 text-sm text-white/75">Choose how you want to focus today.</p>
 
           <div className="mt-5">
