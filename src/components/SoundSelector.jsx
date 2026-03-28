@@ -2,16 +2,24 @@ import { motion } from 'framer-motion'
 import { AMBIENT_SOUNDS } from '../constants/sounds'
 import { usePomodoroStore } from '../store/usePomodoroStore'
 
-function SoundSelector() {
+const SOUND_LABELS = {
+  rain: 'Rain',
+  fire: 'Fireplace',
+  ocean: 'Ocean',
+  forest: 'Forest',
+  night: 'Night',
+}
+
+function SoundSelector({ embedded = false }) {
   const selectedSound = usePomodoroStore((state) => state.selectedSound)
   const setSelectedSound = usePomodoroStore((state) => state.setSelectedSound)
 
   return (
-    <div className="glass-panel rounded-3xl p-6">
+    <div className={embedded ? '' : 'glass-panel rounded-3xl p-6'}>
       <h3 className="text-lg font-semibold text-purple-200">Ambience</h3>
       <p className="mt-1 text-sm text-white/75">Pick the vibe for this session.</p>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-3">
         {AMBIENT_SOUNDS.map((sound) => (
           <motion.button
             type="button"
@@ -25,7 +33,7 @@ function SoundSelector() {
                 : 'text-white/85'
             }`}
           >
-            {sound.label}
+            {SOUND_LABELS[sound.id] || sound.label}
           </motion.button>
         ))}
       </div>

@@ -6,8 +6,11 @@ import { STAGE } from '../constants/stages'
 import {
   completeGroupSession,
   createGroup,
+  endGroupSession,
   getInviteLink,
+  joinSessionPresence,
   joinGroup,
+  leaveSessionPresence,
   startGroupSession,
   upsertUserProfile,
 } from '../services/groupService'
@@ -72,9 +75,11 @@ export const usePomodoroStore = create(
   persist(
     (set, get) => ({
       activeView: 'landing',
+      authUser: null,
       userProfile: {
         id: createUserId(),
         username: defaultUsername(),
+        photoURL: '',
       },
       currentGroupId: '',
       currentGroupName: '',
@@ -83,6 +88,7 @@ export const usePomodoroStore = create(
       collaborationStatus: 'idle',
       sessionMode: 'solo',
       currentGroupSessionId: '',
+      isGroupCreator: false,
       groupActiveUsers: [],
       durationMinutes: DEFAULT_MINUTES,
       totalSeconds: secondsFromMinutes(DEFAULT_MINUTES),
@@ -100,6 +106,34 @@ export const usePomodoroStore = create(
       motivationLine: pickRandomLine(STAGE.IGNITION),
       lastTickAt: null,
       showCompletion: false,
+
+      setAuthUser: (authUser) => {
+        if (!authUser) {
+          set({ authUser: null })
+          return
+        }
+
+        set((state) => ({
+          authUser,
+          userProfile: {
+            ...state.userProfile,
+            id: authUser.uid,
+            username: authUser.name || authUser.email || state.userProfile.username,
+            photoURL: authUser.photoURL || '',
+          },
+        }))
+      },
+
+      clearAuthUser: () => {
+        set(() => ({
+          authUser: null,
+          userProfile: {
+            id: createUserId(),
+            username: defaultUsername(),
+            photoURL: '',
+          },
+        }))
+      },
 
       setUsername: async (username) => {
         const nextUsername = String(username || '').trim().slice(0, 24)
@@ -128,6 +162,7 @@ export const usePomodoroStore = create(
             userProfile: {
               id: createUserId(),
               username: defaultUsername(),
+              photoURL: '',
             },
           })
         }
@@ -147,11 +182,20 @@ export const usePomodoroStore = create(
 
       setGroupActiveUsers: (activeUsers) => set({ groupActiveUsers: activeUsers }),
 
-      createStudyGroup: async (groupName) => {
+      createStudyGroup: async (groupName, options = {}) => {
+        const { openDashboard = true } = options
         const trimmedName = String(groupName || '').trim().slice(0, 40)
         if (!trimmedName) return null
 
-        const { userProfile } = get()
+        const { authUser, userProfile } = get()
+        if (!authUser) {
+          set({
+            collaborationStatus: 'error',
+            collaborationError: 'Please login with Google to create or join group sessions.',
+          })
+          return null
+        }
+
         set({ collaborationStatus: 'working', collaborationError: '' })
 
         try {
@@ -160,7 +204,8 @@ export const usePomodoroStore = create(
             currentGroupId: result.id,
             currentGroupName: trimmedName,
             inviteLink: result.inviteLink,
-            activeView: 'group',
+            isGroupCreator: true,
+            activeView: openDashboard ? 'group' : get().activeView,
             collaborationStatus: 'success',
           })
           return result
@@ -173,7 +218,8 @@ export const usePomodoroStore = create(
         }
       },
 
-      joinStudyGroup: async (groupCodeOrLink) => {
+      joinStudyGroup: async (groupCodeOrLink, options = {}) => {
+        const { openDashboard = true } = options
         const rawValue = String(groupCodeOrLink || '').trim()
         if (!rawValue) return null
 
@@ -184,7 +230,15 @@ export const usePomodoroStore = create(
         const groupId = resolvedCode.toUpperCase()
         if (!groupId) return null
 
-        const { userProfile } = get()
+        const { authUser, userProfile } = get()
+        if (!authUser) {
+          set({
+            collaborationStatus: 'error',
+            collaborationError: 'Please login with Google to create or join group sessions.',
+          })
+          return null
+        }
+
         set({ collaborationStatus: 'working', collaborationError: '' })
 
         try {
@@ -192,7 +246,8 @@ export const usePomodoroStore = create(
           set({
             currentGroupId: groupId,
             inviteLink: getInviteLink(groupId),
-            activeView: 'group',
+            isGroupCreator: false,
+            activeView: openDashboard ? 'group' : get().activeView,
             collaborationStatus: 'success',
           })
           return groupId
@@ -227,9 +282,17 @@ export const usePomodoroStore = create(
       setVolume: (value) => set({ volume: Math.min(0.6, Math.max(0.4, value)) }),
 
       startSession: async ({ mode = 'solo', groupId = '' } = {}) => {
-        const { totalSeconds, durationMinutes, currentGroupId, userProfile } = get()
+        const { authUser, totalSeconds, durationMinutes, currentGroupId, userProfile } = get()
         const resolvedGroupId = groupId || currentGroupId
         let groupSessionId = ''
+
+        if (mode === 'group' && !authUser) {
+          set({
+            collaborationStatus: 'error',
+            collaborationError: 'Please login with Google to create or join group sessions.',
+          })
+          return
+        }
 
         if (mode === 'group' && resolvedGroupId) {
           try {
@@ -237,6 +300,12 @@ export const usePomodoroStore = create(
               groupId: resolvedGroupId,
               user: userProfile,
               durationMinutes,
+            })
+
+            await joinSessionPresence({
+              groupId: resolvedGroupId,
+              user: userProfile,
+              sessionId: groupSessionId,
             })
           } catch (error) {
             set({ collaborationError: error?.message || 'Could not start group session.' })
@@ -266,7 +335,22 @@ export const usePomodoroStore = create(
       },
 
       quitSession: () => {
-        const { totalSeconds } = get()
+        const {
+          totalSeconds,
+          sessionMode,
+          currentGroupId,
+          userProfile,
+        } = get()
+
+        if (sessionMode === 'group' && currentGroupId) {
+          leaveSessionPresence({
+            groupId: currentGroupId,
+            userId: userProfile.id,
+          }).catch((error) => {
+            set({ collaborationError: error?.message || 'Could not update participant status.' })
+          })
+        }
+
         set({
           activeView: 'setup',
           status: 'idle',
@@ -279,6 +363,19 @@ export const usePomodoroStore = create(
           sessionMode: 'solo',
           currentGroupSessionId: '',
         })
+      },
+
+      endGroupSessionAsCreator: async () => {
+        const { currentGroupId } = get()
+        if (!currentGroupId) return
+
+        try {
+          await endGroupSession({ groupId: currentGroupId })
+        } catch (error) {
+          set({ collaborationError: error?.message || 'Could not end group session for everyone.' })
+        }
+
+        get().quitSession()
       },
 
       closeCompletion: () => set({ showCompletion: false }),
@@ -388,6 +485,7 @@ export const usePomodoroStore = create(
         lastTickAt: state.lastTickAt,
         showCompletion: state.showCompletion,
         userProfile: state.userProfile,
+        authUser: state.authUser,
         currentGroupId: state.currentGroupId,
         currentGroupName: state.currentGroupName,
         inviteLink: state.inviteLink,
@@ -395,6 +493,7 @@ export const usePomodoroStore = create(
         collaborationStatus: state.collaborationStatus,
         sessionMode: state.sessionMode,
         currentGroupSessionId: state.currentGroupSessionId,
+        isGroupCreator: state.isGroupCreator,
       }),
     },
   ),

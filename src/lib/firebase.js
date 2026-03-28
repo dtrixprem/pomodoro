@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app'
-import { getAnalytics } from 'firebase/analytics'
+import { getAnalytics, isSupported } from 'firebase/analytics'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
@@ -23,15 +24,31 @@ const hasFirebaseConfig = [
 
 let app = null
 let db = null
+let auth = null
+let googleProvider = null
 let analytics = null
+
+const initializeAnalyticsIfSupported = async (firebaseApp, measurementId) => {
+  if (import.meta.env.DEV) return
+  if (!measurementId || typeof window === 'undefined') return
+
+  try {
+    const supported = await isSupported()
+    if (supported) {
+      analytics = getAnalytics(firebaseApp)
+    }
+  } catch {
+    analytics = null
+  }
+}
 
 if (hasFirebaseConfig) {
   app = initializeApp(firebaseConfig)
   db = getFirestore(app)
+  auth = getAuth(app)
+  googleProvider = new GoogleAuthProvider()
 
-  if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
-    analytics = getAnalytics(app)
-  }
+  void initializeAnalyticsIfSupported(app, firebaseConfig.measurementId)
 }
 
-export { app, db, analytics, hasFirebaseConfig }
+export { app, db, auth, googleProvider, analytics, hasFirebaseConfig }

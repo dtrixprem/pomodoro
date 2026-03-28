@@ -2,7 +2,6 @@ import { usePomodoroStore } from '../store/usePomodoroStore'
 
 function LandingScreen() {
   const goToSetup = usePomodoroStore((state) => state.goToSetup)
-  const goToGroupDashboard = usePomodoroStore((state) => state.goToGroupDashboard)
   const backgroundImage = `url('${import.meta.env.BASE_URL}images/bgimg.png')`
 
   return (
@@ -10,6 +9,7 @@ function LandingScreen() {
       className="theme-rain relative flex h-screen items-center justify-center overflow-hidden px-6 bg-cover bg-center"
       style={{ backgroundImage }}
     >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="glass-panel relative z-10 w-full max-w-xl rounded-3xl p-10 text-center">
         <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
           Ready to focus?
@@ -25,14 +25,7 @@ function LandingScreen() {
             onClick={goToSetup}
             className="cta-button text-sm tracking-wide"
           >
-            Start Session
-          </button>
-          <button
-            type="button"
-            onClick={goToGroupDashboard}
-            className="glass-button text-sm tracking-wide"
-          >
-            Group Dashboard
+            Start Session Options
           </button>
         </div>
       </div>

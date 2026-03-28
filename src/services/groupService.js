@@ -1,8 +1,12 @@
 import {
+  addDoc,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -56,6 +60,7 @@ export const upsertUserProfile = async (user) => {
     await setDoc(userRef, {
       id: user.id,
       username: user.username,
+      photoURL: user.photoURL || '',
       groupIds: [],
       totalFocusMinutes: 0,
       sessionsCompleted: 0,
@@ -68,7 +73,17 @@ export const upsertUserProfile = async (user) => {
 
   await updateDoc(userRef, {
     username: user.username,
+    photoURL: user.photoURL || '',
     updatedAt: serverTimestamp(),
+  })
+}
+
+const addSystemMessage = async (groupId, text) => {
+  await addDoc(collection(db, 'groupMessages'), {
+    groupId,
+    type: 'system',
+    text,
+    createdAt: serverTimestamp(),
   })
 }
 
@@ -96,6 +111,13 @@ export const createGroup = async ({ name, admin }) => {
           updatedAt: new Date().toISOString(),
         },
       ],
+      groupSession: {
+        status: 'idle',
+        creatorId: admin.id,
+        startedAt: null,
+        endedAt: null,
+        updatedAt: new Date().toISOString(),
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -234,13 +256,150 @@ export const startGroupSession = async ({ groupId, user, durationMinutes }) => {
       updatedAt: serverTimestamp(),
     })
 
+    const groupData = groupSnapshot.data()
+    const currentSession = groupData.groupSession || {}
+
     transaction.update(groupRef, {
       sessions: arrayUnion(sessionRef.id),
+      groupSession: {
+        status: 'running',
+        creatorId: currentSession.creatorId || user.id,
+        startedAt: currentSession.startedAt || new Date().toISOString(),
+        endedAt: null,
+        updatedAt: new Date().toISOString(),
+      },
       updatedAt: serverTimestamp(),
     })
   })
 
   return sessionRef.id
+}
+
+export const endGroupSession = async ({ groupId }) => {
+  ensureFirebase()
+
+  const groupRef = doc(db, 'groups', groupId)
+  await updateDoc(groupRef, {
+    groupSession: {
+      status: 'ended',
+      endedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export const joinSessionPresence = async ({ groupId, user, sessionId }) => {
+  ensureFirebase()
+
+  const participantRef = doc(db, 'sessionParticipants', `${groupId}_${user.id}`)
+  const existingSnapshot = await getDoc(participantRef)
+
+  await setDoc(participantRef, {
+    id: `${groupId}_${user.id}`,
+    groupId,
+    userId: user.id,
+    username: user.username,
+    photoURL: user.photoURL || '',
+    sessionId,
+    isActive: true,
+    updatedAt: serverTimestamp(),
+    joinedAt: serverTimestamp(),
+  })
+
+  if (!existingSnapshot.exists()) {
+    await addSystemMessage(groupId, `${user.username} joined the session`)
+  }
+}
+
+export const leaveSessionPresence = async ({ groupId, userId }) => {
+  ensureFirebase()
+
+  const participantRef = doc(db, 'sessionParticipants', `${groupId}_${userId}`)
+  const participantSnapshot = await getDoc(participantRef)
+  const participantData = participantSnapshot.exists() ? participantSnapshot.data() : null
+
+  await deleteDoc(participantRef)
+
+  if (participantData?.username) {
+    await addSystemMessage(groupId, `${participantData.username} left the session`)
+  }
+
+  const participantsQuery = query(
+    collection(db, 'sessionParticipants'),
+    where('groupId', '==', groupId),
+    where('isActive', '==', true),
+    limit(1),
+  )
+
+  const remaining = await getDocs(participantsQuery)
+  if (remaining.empty) {
+    await endGroupSession({ groupId })
+  }
+}
+
+export const watchSessionParticipants = (groupId, onData, onError) => {
+  ensureFirebase()
+
+  const participantQuery = query(
+    collection(db, 'sessionParticipants'),
+    where('groupId', '==', groupId),
+    where('isActive', '==', true),
+  )
+
+  return onSnapshot(
+    participantQuery,
+    (snapshot) => {
+      onData(
+        snapshot.docs.map((row) => ({
+          id: row.id,
+          ...row.data(),
+        })),
+      )
+    },
+    onError,
+  )
+}
+
+export const sendGroupMessage = async ({ groupId, user, message }) => {
+  ensureFirebase()
+
+  const text = String(message || '').trim()
+  if (!text) return
+
+  await addDoc(collection(db, 'groupMessages'), {
+    groupId,
+    userId: user.id,
+    username: user.username,
+    photoURL: user.photoURL || '',
+    type: 'user',
+    text,
+    createdAt: serverTimestamp(),
+  })
+}
+
+export const watchGroupMessages = (groupId, onData, onError) => {
+  ensureFirebase()
+
+  const chatQuery = query(
+    collection(db, 'groupMessages'),
+    where('groupId', '==', groupId),
+    orderBy('createdAt', 'asc'),
+  )
+
+  return onSnapshot(
+    chatQuery,
+    (snapshot) => {
+      onData(
+        snapshot.docs.map((row) => ({
+          id: row.id,
+          ...row.data(),
+          createdAt: toDate(row.data().createdAt),
+        })),
+      )
+    },
+    onError,
+  )
 }
 
 export const completeGroupSession = async ({

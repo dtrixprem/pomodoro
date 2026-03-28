@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import AuthQuickActions from './AuthQuickActions'
 import InviteModal from './InviteModal'
 import Leaderboard from './Leaderboard'
 import MemberList from './MemberList'
@@ -7,6 +8,7 @@ import { watchGroup, watchGroupSessions } from '../services/groupService'
 import { usePomodoroStore } from '../store/usePomodoroStore'
 
 function GroupPage() {
+  const authUser = usePomodoroStore((state) => state.authUser)
   const userProfile = usePomodoroStore((state) => state.userProfile)
   const currentGroupId = usePomodoroStore((state) => state.currentGroupId)
   const inviteLink = usePomodoroStore((state) => state.inviteLink)
@@ -18,6 +20,7 @@ function GroupPage() {
   const setGroupActiveUsers = usePomodoroStore((state) => state.setGroupActiveUsers)
   const startSession = usePomodoroStore((state) => state.startSession)
   const goToSetup = usePomodoroStore((state) => state.goToSetup)
+  const goToLanding = usePomodoroStore((state) => state.goToLanding)
 
   const [usernameDraft, setUsernameDraft] = useState(userProfile.username)
   const [newGroupName, setNewGroupName] = useState('')
@@ -126,6 +129,13 @@ function GroupPage() {
     <section className="theme-rain animated-gradient min-h-screen px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-3">
         <div className="glass-panel rounded-3xl p-5 md:col-span-1">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <button type="button" className="glass-button text-xs" onClick={goToLanding}>
+              Back to Home
+            </button>
+            <AuthQuickActions compact />
+          </div>
+
           <h2 className="text-2xl font-semibold text-white">Group Dashboard</h2>
           <p className="mt-1 text-sm text-white/75">Collaborative focus with live accountability.</p>
 
@@ -150,7 +160,11 @@ function GroupPage() {
               className="w-full rounded-xl border border-white/20 bg-black/20 px-3 py-2 text-white"
               placeholder="Group name"
             />
-            <button type="submit" className="glass-button text-sm">
+            <button
+              type="submit"
+              disabled={!authUser}
+              className="glass-button text-sm disabled:cursor-not-allowed disabled:opacity-55"
+            >
               Create Group
             </button>
           </form>
@@ -163,10 +177,20 @@ function GroupPage() {
               className="w-full rounded-xl border border-white/20 bg-black/20 px-3 py-2 text-white"
               placeholder="Group code or invite link"
             />
-            <button type="submit" className="glass-button text-sm">
+            <button
+              type="submit"
+              disabled={!authUser}
+              className="glass-button text-sm disabled:cursor-not-allowed disabled:opacity-55"
+            >
               Join
             </button>
           </form>
+
+          {!authUser && (
+            <p className="mt-4 text-sm text-amber-100">
+              Login with Google from the top-right profile button to manage group sessions.
+            </p>
+          )}
 
           {collaborationStatus === 'working' && (
             <p className="mt-4 text-sm text-cyan-100">Syncing with group workspace...</p>
@@ -200,7 +224,7 @@ function GroupPage() {
               <button
                 type="button"
                 className="cta-button text-sm"
-                disabled={!currentGroupId}
+                disabled={!authUser || !currentGroupId}
                 onClick={() => startSession({ mode: 'group', groupId: currentGroupId })}
               >
                 Start Group Session
