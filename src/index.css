@@ -63,7 +63,7 @@ body {
   background: linear-gradient(to bottom, rgba(220, 231, 255, 0.74), rgba(164, 191, 250, 0.68));
 }
 
-@media (max-width: 900px) and (prefers-color-scheme: light) {
+@media (max-width: 900px) {
   .glass-panel {
     background: rgba(12, 18, 30, 0.58);
     border-color: rgba(255, 255, 255, 0.24);

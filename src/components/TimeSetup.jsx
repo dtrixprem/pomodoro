@@ -106,7 +106,7 @@ function TimeSetup() {
                 key={preset}
                 type="button"
                 onClick={() => setDurationMinutes(preset)}
-                className={`min-w-23 rounded-full border px-4 py-2 text-sm font-semibold text-white transition duration-200 scheme-dark ${
+                className={`min-w-23 rounded-full border px-4 py-2 text-sm font-semibold text-white transition duration-200 ${
                   durationMinutes === preset
                     ? 'border-indigo-200/75 bg-indigo-300/30 shadow-[0_0_10px_var(--accent-soft)]'
                     : 'border-white/25 bg-slate-900/45 text-white/90 hover:bg-slate-900/55'
