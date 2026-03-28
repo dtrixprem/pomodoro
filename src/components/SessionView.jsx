@@ -323,6 +323,10 @@ const LeftCollabPanel = memo(function LeftCollabPanel({ groupId, quizState, isCr
 
 const GroupSidePanel = memo(function GroupSidePanel({
   mobile = false,
+  groupId,
+  quizState,
+  isCreator,
+  focusQuiz = false,
   groupName,
   inviteCode,
   copiedCode,
@@ -348,64 +352,87 @@ const GroupSidePanel = memo(function GroupSidePanel({
   chatEndRef,
 }) {
   const fileInputId = mobile ? 'group-chat-file-mobile' : 'group-chat-file-desktop'
+  const showQuizOnly = mobile && focusQuiz
+  const quizSectionRef = useRef(null)
+
+  useEffect(() => {
+    if (!mobile || !focusQuiz) return
+    quizSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [focusQuiz, mobile])
 
   return (
     <aside
       className={`glass-panel mobile-contrast-panel flex h-full min-h-0 flex-col rounded-3xl bg-black/25 ${
-        mobile ? 'w-full p-3 sm:p-4' : 'w-[20rem] p-4 xl:w-88'
+        mobile ? 'w-full overflow-y-auto p-3 sm:p-4' : 'w-[20rem] p-4 xl:w-88'
       }`}
     >
-      <div className="flex h-full min-h-0 flex-col gap-4">
-        <div className="rounded-2xl bg-black/20 p-4">
-          <h3 className="text-base font-semibold text-white">{groupName || 'Focus Group'}</h3>
-          <div className="mt-2 flex items-center gap-2">
-            <div className="flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2 font-mono text-xs text-white">{inviteCode}</div>
-            <button
-              type="button"
-              onClick={onCopyCode}
-              className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-white transition hover:bg-white/20"
-            >
-              Copy
-            </button>
+      <div className={`flex flex-col gap-4 ${mobile ? 'h-auto' : 'h-full min-h-0'}`}>
+        {!showQuizOnly && (
+          <div className="rounded-2xl bg-black/20 p-4">
+            <h3 className="text-base font-semibold text-white">{groupName || 'Focus Group'}</h3>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2 font-mono text-xs text-white">{inviteCode}</div>
+              <button
+                type="button"
+                onClick={onCopyCode}
+                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-white transition hover:bg-white/20"
+              >
+                Copy
+              </button>
+            </div>
+            {copiedCode && <p className="mt-1 text-[11px] text-emerald-200">Copied!</p>}
+            {inviteLink && <p className="mt-2 truncate text-[11px] text-white/55">{inviteLink}</p>}
           </div>
-          {copiedCode && <p className="mt-1 text-[11px] text-emerald-200">Copied!</p>}
-          {inviteLink && <p className="mt-2 truncate text-[11px] text-white/55">{inviteLink}</p>}
+        )}
+
+        <div ref={quizSectionRef} className={`rounded-2xl bg-black/20 p-3 sm:p-4 xl:hidden ${showQuizOnly ? 'flex-1' : ''}`}>
+          <QuizModePanel
+            className={showQuizOnly ? 'h-full' : ''}
+            groupId={groupId}
+            quizState={quizState}
+            isCreator={isCreator}
+            currentUser={currentUser}
+            activeUsers={activeUsers}
+          />
         </div>
 
-        <div className="rounded-2xl bg-black/20 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Participants</p>
-            <p className="text-[11px] text-emerald-100">{activeCount} live</p>
+        {!showQuizOnly && (
+          <div className="rounded-2xl bg-black/20 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Participants</p>
+              <p className="text-[11px] text-emerald-100">{activeCount} live</p>
+            </div>
+            <ParticipantsStrip activeUsers={activeUsers} />
           </div>
-          <ParticipantsStrip activeUsers={activeUsers} />
-        </div>
+        )}
 
-        <div className="min-h-0 flex-1 rounded-2xl bg-black/20">
-          <div className="flex h-full min-h-0 flex-col">
-            <div className="shrink-0 px-3 py-2">
-              <p className="text-sm font-semibold text-white">Live Chat</p>
-            </div>
+        {!showQuizOnly && (
+          <div className={`rounded-2xl bg-black/20 ${mobile ? 'min-h-88 flex-none' : 'min-h-0 flex-1'}`}>
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="shrink-0 px-3 py-2">
+                <p className="text-sm font-semibold text-white">Live Chat</p>
+              </div>
 
-            <div className="chat-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-3">
-              <ChatMessagesList
-                messages={chatMessages}
-                currentUserId={currentUser?.id}
-                onReactToMessage={onReactToMessage}
-                onDownloadFile={onDownloadFile}
-                reactingMessageId={reactingMessageId}
-                chatEndRef={chatEndRef}
-              />
-            </div>
-
-            <div className="shrink-0 p-4">
-              <form onSubmit={onChatSubmit} className="relative">
-                <input
-                  id={fileInputId}
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg,.txt"
-                  onChange={onPickFile}
-                  className="hidden"
+              <div className="chat-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-3">
+                <ChatMessagesList
+                  messages={chatMessages}
+                  currentUserId={currentUser?.id}
+                  onReactToMessage={onReactToMessage}
+                  onDownloadFile={onDownloadFile}
+                  reactingMessageId={reactingMessageId}
+                  chatEndRef={chatEndRef}
                 />
+              </div>
+
+              <div className="shrink-0 p-4">
+                <form onSubmit={onChatSubmit} className="relative">
+                  <input
+                    id={fileInputId}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.txt"
+                    onChange={onPickFile}
+                    className="hidden"
+                  />
 
                 <label
                   htmlFor={fileInputId}
@@ -454,16 +481,17 @@ const GroupSidePanel = memo(function GroupSidePanel({
                     <span aria-hidden="true" className="text-sm">➤</span>
                   )}
                 </button>
-              </form>
+                </form>
 
-              {(isUploadingFile || chatFeedback) && (
-                <p className="mt-2 text-[11px] text-white/70">
-                  {isUploadingFile ? `Uploading... ${uploadProgress}%` : chatFeedback}
-                </p>
-              )}
+                {(isUploadingFile || chatFeedback) && (
+                  <p className="mt-2 text-[11px] text-white/70">
+                    {isUploadingFile ? `Uploading... ${uploadProgress}%` : chatFeedback}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </aside>
   )
@@ -500,6 +528,7 @@ function SessionView() {
   const [chatFeedback, setChatFeedback] = useState('')
   const [reactingMessageId, setReactingMessageId] = useState('')
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
+  const [mobilePanelFocusQuiz, setMobilePanelFocusQuiz] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
   const chatEndRef = useRef(null)
   const notificationAudioRef = useRef(null)
@@ -940,12 +969,12 @@ function SessionView() {
             </div>
 
             <div className="glass-panel mobile-contrast-panel shrink-0 rounded-3xl border border-white/10 px-3 py-3 shadow-lg sm:px-4 md:px-6 md:py-4">
-              <div className="flex flex-wrap items-center justify-center gap-2.5 md:gap-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:justify-center sm:overflow-visible sm:whitespace-normal sm:pb-0 md:gap-2.5">
                 {status === 'running' ? (
                   <button
                     type="button"
                     onClick={pauseSession}
-                    className="glass-button text-sm"
+                    className="glass-button h-8 shrink-0 px-3 py-1 text-xs sm:h-auto sm:py-1.5 sm:text-sm"
                   >
                     Pause
                   </button>
@@ -953,7 +982,7 @@ function SessionView() {
                   <button
                     type="button"
                     onClick={resumeSession}
-                    className="glass-button border-white/35 bg-white/16 text-sm shadow-[0_0_14px_var(--accent-soft)]"
+                    className="glass-button h-8 shrink-0 border-white/35 bg-white/16 px-3 py-1 text-xs shadow-[0_0_14px_var(--accent-soft)] sm:h-auto sm:py-1.5 sm:text-sm"
                   >
                     Resume
                   </button>
@@ -962,7 +991,7 @@ function SessionView() {
                 <button
                   type="button"
                   onClick={handleTryQuit}
-                  className="glass-button text-sm"
+                  className="glass-button h-8 shrink-0 px-3 py-1 text-xs sm:h-auto sm:py-1.5 sm:text-sm"
                 >
                   Stop
                 </button>
@@ -971,7 +1000,7 @@ function SessionView() {
                   <button
                     type="button"
                     onClick={handleEndSession}
-                    className="glass-button border-rose-200/45 bg-rose-300/20 text-sm text-rose-100"
+                    className="glass-button h-8 shrink-0 border-rose-200/45 bg-rose-300/20 px-3 py-1 text-xs text-rose-100 sm:h-auto sm:py-1.5 sm:text-sm"
                   >
                     End Session
                   </button>
@@ -980,10 +1009,26 @@ function SessionView() {
                 {isGroupSession && (
                   <button
                     type="button"
-                    onClick={() => setMobilePanelOpen(true)}
-                    className="glass-button text-sm lg:hidden"
+                    onClick={() => {
+                      setMobilePanelFocusQuiz(true)
+                      setMobilePanelOpen(true)
+                    }}
+                    className="glass-button h-8 shrink-0 px-3 py-1 text-xs lg:hidden sm:h-auto sm:py-1.5 sm:text-sm"
                   >
-                    Open Group Panel
+                    Quiz
+                  </button>
+                )}
+
+                {isGroupSession && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobilePanelFocusQuiz(false)
+                      setMobilePanelOpen(true)
+                    }}
+                    className="glass-button h-8 shrink-0 px-3 py-1 text-xs lg:hidden sm:h-auto sm:py-1.5 sm:text-sm"
+                  >
+                    Chat
                   </button>
                 )}
               </div>
@@ -993,6 +1038,9 @@ function SessionView() {
           {isGroupSession && (
             <div className="hidden h-full min-h-0 lg:block">
               <GroupSidePanel
+                groupId={currentGroupId}
+                quizState={quizState}
+                isCreator={isCreator}
                 groupName={groupData?.name}
                 inviteCode={inviteCode}
                 copiedCode={copiedCode}
@@ -1015,6 +1063,7 @@ function SessionView() {
                 onReactToMessage={handleReactToMessage}
                 onDownloadFile={handleDownloadFile}
                 reactingMessageId={reactingMessageId}
+                focusQuiz={false}
                 chatEndRef={chatEndRef}
               />
             </div>
@@ -1027,12 +1076,18 @@ function SessionView() {
           <button
             type="button"
             className="absolute inset-0 bg-black/60"
-            onClick={() => setMobilePanelOpen(false)}
+            onClick={() => {
+              setMobilePanelOpen(false)
+              setMobilePanelFocusQuiz(false)
+            }}
             aria-label="Close group panel"
           />
-          <div className="absolute bottom-0 left-0 right-0 h-[82dvh] rounded-t-3xl p-2.5 sm:h-[78dvh] sm:p-3">
+          <div className="mobile-sheet absolute bottom-0 left-0 right-0 h-[82dvh] rounded-t-3xl p-2.5 sm:h-[78dvh] sm:p-3">
             <GroupSidePanel
               mobile
+              groupId={currentGroupId}
+              quizState={quizState}
+              isCreator={isCreator}
               groupName={groupData?.name}
               inviteCode={inviteCode}
               copiedCode={copiedCode}
@@ -1055,6 +1110,7 @@ function SessionView() {
               onReactToMessage={handleReactToMessage}
               onDownloadFile={handleDownloadFile}
               reactingMessageId={reactingMessageId}
+              focusQuiz={mobilePanelFocusQuiz}
               chatEndRef={chatEndRef}
             />
           </div>

@@ -27,7 +27,7 @@ function CompletionModal({ open, streak, xp, onClose, onStartAnother }) {
             initial={{ y: 16, scale: 0.94 }}
             animate={{ y: 0, scale: 1 }}
             exit={{ y: 10, scale: 0.95 }}
-            className="glass-panel w-full max-w-lg rounded-3xl p-5 sm:p-7"
+            className="glass-panel mobile-contrast-panel quit-dialog-panel max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl p-5 sm:p-7"
           >
             <h3 className="text-xl font-semibold text-center leading-relaxed text-white sm:text-2xl">{messageLine}</h3>
             <p className="mt-3 text-sm text-center leading-relaxed text-white">This is how progress is built.</p>

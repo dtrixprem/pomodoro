@@ -14,10 +14,32 @@ body {
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: #fff;
   background: #10141a;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(186, 210, 255, 0.72);
+  outline-offset: 2px;
 }
 
 .glass-panel {
@@ -61,6 +83,10 @@ body {
 
 .chat-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(to bottom, rgba(220, 231, 255, 0.74), rgba(164, 191, 250, 0.68));
+}
+
+.mobile-sheet {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
 }
 
 @media (max-width: 900px) {
@@ -137,6 +163,17 @@ body {
   .confirm-primary {
     background: linear-gradient(to right, #4f65bd, #674eb2) !important;
     color: #f7fbff !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
