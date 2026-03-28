@@ -106,10 +106,10 @@ function TimeSetup() {
                 key={preset}
                 type="button"
                 onClick={() => setDurationMinutes(preset)}
-                className={`glass-button min-w-23 text-sm ${
+                className={`min-w-23 rounded-full border px-4 py-2 text-sm font-semibold text-white transition duration-200 scheme-dark ${
                   durationMinutes === preset
-                    ? 'border-white/35 bg-white/16 shadow-[0_0_14px_var(--accent-soft)]'
-                    : 'text-white/85'
+                    ? 'border-indigo-200/75 bg-indigo-300/30 shadow-[0_0_10px_var(--accent-soft)]'
+                    : 'border-white/25 bg-slate-900/45 text-white/90 hover:bg-slate-900/55'
                 }`}
               >
                 {preset} min
