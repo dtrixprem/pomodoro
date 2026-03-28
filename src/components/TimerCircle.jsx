@@ -38,7 +38,7 @@ function TimerCircle({ remainingSeconds, progress, accentColor = 'var(--accent)'
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div
-          className="glass-panel flex h-[8.8rem] w-[8.8rem] items-center justify-center rounded-full border border-white/20 text-3xl font-semibold tracking-tight text-white shadow-[0_0_30px_rgba(100,200,255,0.2)] sm:h-40 sm:w-40 sm:text-4xl md:h-48 md:w-48 md:text-5xl lg:h-52 lg:w-52 lg:text-6xl"
+          className="glass-panel timer-core flex h-[8.8rem] w-[8.8rem] items-center justify-center rounded-full border border-white/20 text-3xl font-semibold tracking-tight text-white shadow-[0_0_30px_rgba(100,200,255,0.2)] sm:h-40 sm:w-40 sm:text-4xl md:h-48 md:w-48 md:text-5xl lg:h-52 lg:w-52 lg:text-6xl"
           style={{ boxShadow: `0 0 30px rgba(100,200,255,0.2), 0 0 0 10px ${glowColor}` }}
         >
           {formatSeconds(remainingSeconds)}

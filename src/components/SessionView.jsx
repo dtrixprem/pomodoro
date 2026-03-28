@@ -304,7 +304,7 @@ const ChatMessagesList = memo(function ChatMessagesList({ messages, currentUserI
 
 const LeftCollabPanel = memo(function LeftCollabPanel({ groupId, quizState, isCreator, currentUser, activeUsers }) {
   return (
-    <aside className="glass-panel h-full min-h-0 w-[20rem] rounded-3xl border border-white/15 bg-black/25 2xl:w-88">
+    <aside className="glass-panel mobile-contrast-panel h-full min-h-0 w-[20rem] rounded-3xl border border-white/15 bg-black/25 2xl:w-88">
       <div className="flex h-full flex-col p-4 gap-5">
         <div className="flex-1">
           <QuizModePanel
@@ -351,7 +351,7 @@ const GroupSidePanel = memo(function GroupSidePanel({
 
   return (
     <aside
-      className={`glass-panel flex h-full min-h-0 flex-col rounded-3xl bg-black/25 ${
+      className={`glass-panel mobile-contrast-panel flex h-full min-h-0 flex-col rounded-3xl bg-black/25 ${
         mobile ? 'w-full p-3 sm:p-4' : 'w-[20rem] p-4 xl:w-88'
       }`}
     >
@@ -897,7 +897,7 @@ function SessionView() {
           )}
 
           <div className="flex min-w-0 flex-1 flex-col gap-3 lg:justify-between lg:gap-0 lg:overflow-hidden">
-            <div className="glass-panel shrink-0 rounded-3xl border border-white/15 px-4 py-3 shadow-lg sm:px-5 sm:py-4 md:px-6 md:py-5">
+            <div className="glass-panel mobile-contrast-panel shrink-0 rounded-3xl border border-white/15 px-4 py-3 shadow-lg sm:px-5 sm:py-4 md:px-6 md:py-5">
               <p className="text-xs uppercase tracking-wide text-purple-200">Progress</p>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/20">
@@ -939,7 +939,7 @@ function SessionView() {
               />
             </div>
 
-            <div className="glass-panel shrink-0 rounded-3xl border border-white/10 px-3 py-3 shadow-lg sm:px-4 md:px-6 md:py-4">
+            <div className="glass-panel mobile-contrast-panel shrink-0 rounded-3xl border border-white/10 px-3 py-3 shadow-lg sm:px-4 md:px-6 md:py-4">
               <div className="flex flex-wrap items-center justify-center gap-2.5 md:gap-3">
                 {status === 'running' ? (
                   <button

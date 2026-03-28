@@ -26,7 +26,7 @@ function ConfirmationModal({ open, progressLabel, onContinue, onQuit }) {
             initial={{ scale: 0.95, y: 15 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 12 }}
-            className="glass-panel w-full max-w-md space-y-4 rounded-xl p-5 sm:p-6"
+            className="glass-panel mobile-contrast-panel quit-dialog-panel w-full max-w-md space-y-4 rounded-xl p-5 sm:p-6"
           >
             <h3 className="text-lg font-semibold text-center leading-relaxed text-white sm:text-xl">You're already {progressLabel} in.</h3>
             <p className="text-sm text-center leading-relaxed text-white">
@@ -36,7 +36,7 @@ function ConfirmationModal({ open, progressLabel, onContinue, onQuit }) {
               <button
                 type="button"
                 onClick={onContinue}
-                className="flex-1 rounded-full bg-linear-to-r from-purple-300 to-indigo-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:scale-105"
+                className="confirm-primary flex-1 rounded-full bg-linear-to-r from-purple-300 to-indigo-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:scale-105"
               >
                 Continue
               </button>
