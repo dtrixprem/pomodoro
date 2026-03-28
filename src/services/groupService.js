@@ -348,7 +348,7 @@ export const watchSessionParticipants = (groupId, onData, onError) => {
   )
 }
 
-export const sendGroupMessage = async ({ groupId, user, message }) => {
+export const sendGroupMessage = async ({ groupId, user, message, clientId }) => {
   ensureFirebase()
 
   const userName = displayName(user)
@@ -356,7 +356,7 @@ export const sendGroupMessage = async ({ groupId, user, message }) => {
   const text = String(message || '').trim()
   if (!text) return
 
-  await addDoc(collection(db, 'groupMessages'), {
+  const payload = {
     groupId,
     userId: user.id,
     name: userName,
@@ -364,28 +364,36 @@ export const sendGroupMessage = async ({ groupId, user, message }) => {
     type: 'user',
     text,
     createdAt: serverTimestamp(),
-  })
+  }
+
+  if (clientId) {
+    payload.clientId = clientId
+  }
+
+  await addDoc(collection(db, 'groupMessages'), payload)
 }
 
 export const watchGroupMessages = (groupId, onData, onError) => {
   ensureFirebase()
 
-  const chatQuery = query(
-    collection(db, 'groupMessages'),
-    where('groupId', '==', groupId),
-    orderBy('createdAt', 'asc'),
-  )
+  const chatQuery = query(collection(db, 'groupMessages'), where('groupId', '==', groupId))
 
   return onSnapshot(
     chatQuery,
     (snapshot) => {
-      onData(
-        snapshot.docs.map((row) => ({
+      const rows = snapshot.docs
+        .map((row) => ({
           id: row.id,
           ...row.data(),
           createdAt: toDate(row.data().createdAt),
-        })),
-      )
+        }))
+        .sort((a, b) => {
+          const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : 0
+          const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : 0
+          return timeA - timeB
+        })
+
+      onData(rows)
     },
     onError,
   )

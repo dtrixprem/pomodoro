@@ -1,6 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { useMemo } from 'react'
+
+const EARLY_EXIT_LINES = [
+  "You're already this far in. Don't quit now.",
+  'Stopping now will feel worse than finishing.',
+  "Stay. You're closer than you think.",
+]
 
 function ConfirmationModal({ open, progressLabel, onContinue, onQuit }) {
+  const warningLine = useMemo(
+    () => EARLY_EXIT_LINES[Math.floor(Math.random() * EARLY_EXIT_LINES.length)],
+    [open],
+  )
+
   return (
     <AnimatePresence>
       {open ? (
@@ -16,9 +28,9 @@ function ConfirmationModal({ open, progressLabel, onContinue, onQuit }) {
             exit={{ scale: 0.95, y: 12 }}
             className="glass-panel w-full max-w-md space-y-4 rounded-xl p-6"
           >
-            <h3 className="text-xl font-semibold text-white">You’re already {progressLabel} in.</h3>
-            <p className="text-sm text-white/80">
-              Stopping now will feel worse than finishing.
+            <h3 className="text-xl font-semibold text-center leading-relaxed text-white">You're already {progressLabel} in.</h3>
+            <p className="text-sm text-center leading-relaxed text-white">
+              {warningLine}
             </p>
             <div className="flex gap-3">
               <button

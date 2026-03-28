@@ -1,6 +1,19 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { useMemo } from 'react'
+
+const COMPLETION_LINES = [
+  "You finished. That's discipline.",
+  'You kept your word to yourself.',
+  "Well done. Most people wouldn't.",
+  'This is how progress is built.',
+]
 
 function CompletionModal({ open, streak, xp, onClose, onStartAnother }) {
+  const messageLine = useMemo(
+    () => COMPLETION_LINES[Math.floor(Math.random() * COMPLETION_LINES.length)],
+    [open],
+  )
+
   return (
     <AnimatePresence>
       {open ? (
@@ -16,9 +29,8 @@ function CompletionModal({ open, streak, xp, onClose, onStartAnother }) {
             exit={{ y: 10, scale: 0.95 }}
             className="glass-panel w-full max-w-lg rounded-3xl p-7"
           >
-            <h3 className="text-2xl font-semibold text-purple-200">Most people give up. You didn’t.</h3>
-            <p className="mt-3 text-sm text-white/75">You kept a promise to yourself.</p>
-            <p className="mt-1 text-sm text-white/75">That’s discipline. That’s rare.</p>
+            <h3 className="text-2xl font-semibold text-center leading-relaxed text-white">{messageLine}</h3>
+            <p className="mt-3 text-sm text-center leading-relaxed text-white">This is how progress is built.</p>
 
             <div className="mt-6 grid grid-cols-2 gap-3 text-center">
               <div className="rounded-2xl border border-white/20 bg-white/8 p-4 backdrop-blur-2xl">

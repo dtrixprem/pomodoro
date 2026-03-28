@@ -94,8 +94,10 @@ const GroupSidePanel = memo(function GroupSidePanel({
   chatMessages,
   chatInput,
   onChatInputChange,
-  onSendChat,
+  onSendMessage,
+  onChatSubmit,
   onChatInputKeyDown,
+  isSendingMessage,
   chatEndRef,
 }) {
   return (
@@ -137,14 +139,31 @@ const GroupSidePanel = memo(function GroupSidePanel({
             </div>
 
             <div className="shrink-0 border-t border-white/10 p-3">
-              <form onSubmit={onSendChat}>
+              <form onSubmit={onChatSubmit} className="relative">
                 <input
                   value={chatInput}
                   onChange={onChatInputChange}
                   onKeyDown={onChatInputKeyDown}
                   placeholder="Type a message..."
-                  className="w-full rounded-full bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/55"
+                  className={`w-full rounded-full bg-white/10 px-4 py-2 pr-11 text-sm text-white placeholder:text-white/55 transition-opacity ${
+                    isSendingMessage ? 'opacity-80' : 'opacity-100'
+                  }`}
                 />
+                <button
+                  type="button"
+                  onClick={onSendMessage}
+                  disabled={!chatInput.trim() || isSendingMessage}
+                  aria-label="Send message"
+                  className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white transition hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {isSendingMessage ? (
+                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : (
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                      <path d="M3 10L17 3L13 17L9.5 10.5L3 10Z" fill="currentColor" />
+                    </svg>
+                  )}
+                </button>
               </form>
             </div>
           </div>
@@ -177,7 +196,9 @@ function SessionView() {
   const [activeUsers, setActiveUsers] = useState([])
   const [groupData, setGroupData] = useState(null)
   const [chatMessages, setChatMessages] = useState([])
+  const [optimisticMessages, setOptimisticMessages] = useState([])
   const [chatInput, setChatInput] = useState('')
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
   const chatEndRef = useRef(null)
@@ -221,13 +242,21 @@ function SessionView() {
 
       unsubscribeChat = watchGroupMessages(
         currentGroupId,
-        (rows) => setChatMessages(rows),
+        (rows) => {
+          setChatMessages(rows)
+          setOptimisticMessages((previous) =>
+            previous.filter(
+              (pending) => !rows.some((saved) => Boolean(saved.clientId) && saved.clientId === pending.clientId),
+            ),
+          )
+        },
         (error) => console.error(error),
       )
     } catch (error) {
       console.error(error)
       setActiveUsers([])
       setChatMessages([])
+      setOptimisticMessages([])
     }
 
     return () => {
@@ -245,6 +274,14 @@ function SessionView() {
   const currentUserActive = activeUsers.some((user) => user.userId === userProfile.id)
   const isCreator = groupData?.groupSession?.creatorId === userProfile.id
   const inviteCode = currentGroupId || '------'
+  const displayedChatMessages = useMemo(() => {
+    if (!optimisticMessages.length) return chatMessages
+
+    const syncedClientIds = new Set(chatMessages.map((message) => message.clientId).filter(Boolean))
+    const pendingOnly = optimisticMessages.filter((message) => !syncedClientIds.has(message.clientId))
+
+    return [...chatMessages, ...pendingOnly]
+  }, [chatMessages, optimisticMessages])
 
   const handleCopyCode = useCallback(async () => {
     if (!inviteCode) return
@@ -257,21 +294,47 @@ function SessionView() {
     }
   }, [inviteCode])
 
-  const handleSendChat = useCallback(async (event) => {
-    event.preventDefault()
-    if (!chatInput.trim() || !currentGroupId) return
+  const handleSendMessage = useCallback(async () => {
+    const text = chatInput.trim()
+    if (!text || !currentGroupId || isSendingMessage) return
+
+    const clientId = `${userProfile.id}-${Date.now()}`
+    const localMessage = {
+      id: `local-${clientId}`,
+      clientId,
+      type: 'user',
+      name: userProfile.name || 'You',
+      text,
+      createdAt: new Date(),
+    }
+
+    setOptimisticMessages((previous) => [...previous, localMessage])
+    setChatInput('')
+    setIsSendingMessage(true)
 
     try {
       await sendGroupMessage({
         groupId: currentGroupId,
         user: userProfile,
-        message: chatInput,
+        message: text,
+        clientId,
       })
-      setChatInput('')
     } catch (error) {
+      setOptimisticMessages((previous) => previous.filter((message) => message.clientId !== clientId))
+      setChatInput(text)
       console.error(error)
+    } finally {
+      setIsSendingMessage(false)
     }
-  }, [chatInput, currentGroupId, userProfile])
+  }, [chatInput, currentGroupId, isSendingMessage, userProfile])
+
+  const handleChatSubmit = useCallback(
+    (event) => {
+      event.preventDefault()
+      void handleSendMessage()
+    },
+    [handleSendMessage],
+  )
 
   const handleChatInputChange = useCallback((event) => {
     setChatInput(event.target.value)
@@ -281,9 +344,9 @@ function SessionView() {
     (event) => {
       if (event.key !== 'Enter' || event.shiftKey) return
       event.preventDefault()
-      handleSendChat(event)
+      void handleSendMessage()
     },
-    [handleSendChat],
+    [handleSendMessage],
   )
 
   const handleTryQuit = () => {
@@ -349,7 +412,7 @@ function SessionView() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
-                className="mt-3 text-center text-lg text-white/80 md:text-xl"
+                className="mt-3 text-center text-lg leading-relaxed text-white md:text-xl"
               >
                 {motivationLine}
               </motion.p>
@@ -433,11 +496,13 @@ function SessionView() {
                 inviteLink={inviteLink}
                 activeUsers={activeUsers}
                 activeCount={activeCount}
-                chatMessages={chatMessages}
+                chatMessages={displayedChatMessages}
                 chatInput={chatInput}
                 onChatInputChange={handleChatInputChange}
-                onSendChat={handleSendChat}
+                onSendMessage={handleSendMessage}
+                onChatSubmit={handleChatSubmit}
                 onChatInputKeyDown={handleChatInputKeyDown}
+                isSendingMessage={isSendingMessage}
                 chatEndRef={chatEndRef}
               />
             </div>
@@ -463,11 +528,13 @@ function SessionView() {
               inviteLink={inviteLink}
               activeUsers={activeUsers}
               activeCount={activeCount}
-              chatMessages={chatMessages}
+              chatMessages={displayedChatMessages}
               chatInput={chatInput}
               onChatInputChange={handleChatInputChange}
-              onSendChat={handleSendChat}
+              onSendMessage={handleSendMessage}
+              onChatSubmit={handleChatSubmit}
               onChatInputKeyDown={handleChatInputKeyDown}
+              isSendingMessage={isSendingMessage}
               chatEndRef={chatEndRef}
             />
           </div>

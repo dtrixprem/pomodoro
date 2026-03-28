@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Howler } from 'howler'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import ProductivityRain from './ProductivityRain'
 import SoundSelector from './SoundSelector'
 import { usePomodoroStore } from '../store/usePomodoroStore'
 
@@ -21,11 +22,18 @@ function TimeSetup() {
   const [groupName, setGroupName] = useState('Study Circle')
   const [joinCode, setJoinCode] = useState('')
   const [showNameWarning, setShowNameWarning] = useState(false)
+  const [loading, setLoading] = useState(null)
+  const [actionFeedback, setActionFeedback] = useState(null)
 
   const trimmedName = String(userProfile?.name || '').trim()
   const requiresGroupName = sessionType !== 'create-group' || String(groupName || '').trim()
   const requiresJoinCode = sessionType !== 'join-group' || String(joinCode || '').trim()
   const canStart = Boolean(trimmedName) && Boolean(requiresGroupName) && Boolean(requiresJoinCode)
+
+  const showActionFeedback = useCallback((type, message) => {
+    setActionFeedback({ type, message })
+    window.setTimeout(() => setActionFeedback(null), 2600)
+  }, [])
 
   const handleStartSession = async () => {
     if (!trimmedName) {
@@ -35,30 +43,39 @@ function TimeSetup() {
 
     let resolvedGroupId = currentGroupId
 
-    if (sessionType === 'create-group') {
-      const result = await createStudyGroup(groupName, { openDashboard: false })
-      resolvedGroupId = result?.id || ''
-    }
-
-    if (sessionType === 'join-group') {
-      const joinedGroup = await joinStudyGroup(joinCode, { openDashboard: false })
-      resolvedGroupId = joinedGroup || ''
-    }
-
-    const mode = sessionType === 'solo' ? 'solo' : 'group'
-
-    // Explicitly resume the WebAudio context after user click (browser autoplay policy).
     try {
+      if (sessionType === 'create-group') {
+        setLoading('create')
+        const result = await createStudyGroup(groupName, { openDashboard: false })
+        resolvedGroupId = result?.id || ''
+        showActionFeedback(result ? 'success' : 'error', result ? 'Group created successfully.' : 'Something went wrong. Try again.')
+      }
+
+      if (sessionType === 'join-group') {
+        setLoading('join')
+        const joinedGroup = await joinStudyGroup(joinCode, { openDashboard: false })
+        resolvedGroupId = joinedGroup || ''
+        showActionFeedback(joinedGroup ? 'success' : 'error', joinedGroup ? 'Joined session.' : 'Something went wrong. Try again.')
+      }
+
+      const mode = sessionType === 'solo' ? 'solo' : 'group'
+      setLoading('start')
+
+      // Explicitly resume the WebAudio context after user click (browser autoplay policy).
       if (Howler.ctx?.state !== 'running') {
         await Howler.ctx?.resume()
       }
       console.log('[audio] user interaction unlocked audio context')
+
+      console.log('[timer] start clicked: starting timer + ambient + bg music')
+      await startSession({ mode, groupId: resolvedGroupId })
+      showActionFeedback('success', 'Session started.')
     } catch (error) {
       console.log('[audio] failed to unlock audio context', error)
+      showActionFeedback('error', 'Something went wrong. Try again.')
+    } finally {
+      setLoading(null)
     }
-
-    console.log('[timer] start clicked: starting timer + ambient + bg music')
-    await startSession({ mode, groupId: resolvedGroupId })
   }
 
   const backgroundImage = `url('${import.meta.env.BASE_URL}images/bgimg.png')`
@@ -69,6 +86,9 @@ function TimeSetup() {
       style={{ backgroundImage }}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="pointer-events-none absolute inset-0 z-1 opacity-70">
+        <ProductivityRain />
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -203,16 +223,33 @@ function TimeSetup() {
             <button
               type="button"
               onClick={handleStartSession}
-              disabled={!canStart}
-              className="cta-button w-full text-sm disabled:cursor-not-allowed disabled:opacity-55"
+              disabled={!canStart || Boolean(loading)}
+              className="cta-button flex w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
             >
-              {sessionType === 'solo'
-                ? 'Start Solo Session'
-                : sessionType === 'create-group'
-                  ? 'Create and Start Group Session'
-                  : 'Join and Start Group Session'}
+              {loading && <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+              {loading === 'create'
+                ? 'Creating...'
+                : loading === 'join'
+                  ? 'Joining...'
+                  : loading === 'start'
+                    ? 'Starting...'
+                    : sessionType === 'solo'
+                      ? 'Start Solo Session'
+                      : sessionType === 'create-group'
+                        ? 'Create and Start Group Session'
+                        : 'Join and Start Group Session'}
             </button>
           </div>
+
+          {actionFeedback && (
+            <p
+              className={`mt-3 text-sm transition-opacity duration-300 ${
+                actionFeedback.type === 'error' ? 'text-rose-200' : 'text-white/70'
+              }`}
+            >
+              {actionFeedback.message}
+            </p>
+          )}
 
           {!trimmedName && showNameWarning && (
             <p className="mt-3 text-sm text-amber-100">Please enter your name to continue.</p>

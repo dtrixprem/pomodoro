@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import InviteModal from './InviteModal'
 import Leaderboard from './Leaderboard'
 import MemberList from './MemberList'
@@ -25,6 +25,13 @@ function GroupPage() {
   const [sessions, setSessions] = useState([])
   const [showInvite, setShowInvite] = useState(false)
   const [period, setPeriod] = useState('all')
+  const [loading, setLoading] = useState(null)
+  const [actionFeedback, setActionFeedback] = useState(null)
+
+  const showActionFeedback = useCallback((type, message) => {
+    setActionFeedback({ type, message })
+    window.setTimeout(() => setActionFeedback(null), 2600)
+  }, [])
 
   useEffect(() => {
     if (!currentGroupId) {
@@ -104,14 +111,32 @@ function GroupPage() {
 
   const handleCreateGroup = async (event) => {
     event.preventDefault()
-    await createStudyGroup(newGroupName)
-    setNewGroupName('')
+    try {
+      setLoading('create')
+      const result = await createStudyGroup(newGroupName)
+      setNewGroupName('')
+      showActionFeedback(result ? 'success' : 'error', result ? 'Group created successfully.' : 'Something went wrong. Try again.')
+    } catch (error) {
+      console.error(error)
+      showActionFeedback('error', 'Something went wrong. Try again.')
+    } finally {
+      setLoading(null)
+    }
   }
 
   const handleJoinGroup = async (event) => {
     event.preventDefault()
-    await joinStudyGroup(joinCode)
-    setJoinCode('')
+    try {
+      setLoading('join')
+      const joinedGroup = await joinStudyGroup(joinCode)
+      setJoinCode('')
+      showActionFeedback(joinedGroup ? 'success' : 'error', joinedGroup ? 'Joined session.' : 'Something went wrong. Try again.')
+    } catch (error) {
+      console.error(error)
+      showActionFeedback('error', 'Something went wrong. Try again.')
+    } finally {
+      setLoading(null)
+    }
   }
 
   const handleSaveProfile = (event) => {
@@ -121,6 +146,19 @@ function GroupPage() {
 
   const activeCount = activeUsers.length
   const hasName = Boolean(String(userProfile?.name || '').trim())
+
+  const handleStartGroupSession = async () => {
+    try {
+      setLoading('start')
+      await startSession({ mode: 'group', groupId: currentGroupId })
+      showActionFeedback('success', 'Session started.')
+    } catch (error) {
+      console.error(error)
+      showActionFeedback('error', 'Something went wrong. Try again.')
+    } finally {
+      setLoading(null)
+    }
+  }
 
   return (
     <section className="theme-rain animated-gradient min-h-screen px-4 py-6 md:px-6 md:py-8">
@@ -152,10 +190,11 @@ function GroupPage() {
             />
             <button
               type="submit"
-              disabled={!hasName}
-              className="glass-button text-sm disabled:cursor-not-allowed disabled:opacity-55"
+              disabled={!hasName || Boolean(loading)}
+              className="glass-button flex items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
             >
-              Create Group
+              {loading === 'create' && <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+              {loading === 'create' ? 'Creating...' : 'Create Group'}
             </button>
           </form>
 
@@ -169,10 +208,11 @@ function GroupPage() {
             />
             <button
               type="submit"
-              disabled={!hasName}
-              className="glass-button text-sm disabled:cursor-not-allowed disabled:opacity-55"
+              disabled={!hasName || Boolean(loading)}
+              className="glass-button flex items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
             >
-              Join
+              {loading === 'join' && <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+              {loading === 'join' ? 'Joining...' : 'Join'}
             </button>
           </form>
 
@@ -182,6 +222,16 @@ function GroupPage() {
 
           {collaborationStatus === 'working' && (
             <p className="mt-4 text-sm text-cyan-100">Syncing with group workspace...</p>
+          )}
+
+          {actionFeedback && (
+            <p
+              className={`mt-4 text-sm transition-opacity duration-300 ${
+                actionFeedback.type === 'error' ? 'text-rose-200' : 'text-white/70'
+              }`}
+            >
+              {actionFeedback.message}
+            </p>
           )}
 
           {collaborationError && <p className="mt-4 text-sm text-rose-200">{collaborationError}</p>}
@@ -208,11 +258,12 @@ function GroupPage() {
 
               <button
                 type="button"
-                className="cta-button text-sm"
-                disabled={!hasName || !currentGroupId}
-                onClick={() => startSession({ mode: 'group', groupId: currentGroupId })}
+                className="cta-button flex items-center gap-2 text-sm"
+                disabled={!hasName || !currentGroupId || Boolean(loading)}
+                onClick={handleStartGroupSession}
               >
-                Start Group Session
+                {loading === 'start' && <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+                {loading === 'start' ? 'Starting...' : 'Start Group Session'}
               </button>
             </div>
 

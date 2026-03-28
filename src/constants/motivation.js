@@ -2,21 +2,21 @@ import { STAGE } from './stages'
 
 export const MOTIVATION_LINES = {
   [STAGE.IGNITION]: [
-    'Starting is what most people avoid. You didn’t.',
-    'Discipline begins exactly here.',
-    'This moment decides your trajectory.',
-    'You showed up. That already separates you.',
+    'You showed up. That\'s already rare.',
+    'Start strong. This moment matters.',
+    'Focus begins with this first step.',
+    'You\'re doing what most people avoid.',
   ],
   [STAGE.FLOW]: [
-    'You’re doing what others postponed.',
-    'Stay here. This is where progress compounds.',
-    'You’re no longer trying. You’re doing.',
-    'This is the version of you that wins.',
+    'You\'re in the zone. Stay here.',
+    'Keep going. This is where progress happens.',
+    'You\'re building something real right now.',
+    'Stay consistent. It\'s working.',
   ],
   [STAGE.FINAL]: [
-    'Most people quit here. Don’t.',
-    'You’re too close to stop now.',
-    'Finish this. Respect your effort.',
-    'End strong. That’s who you are.',
+    'You\'re close. Don\'t stop now.',
+    'Finish this. You\'ll thank yourself.',
+    'This last stretch matters the most.',
+    'End strong. You\'ve come this far.',
   ],
 }
