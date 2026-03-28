@@ -6,7 +6,7 @@ import {
   submitQuizAnswer,
 } from '../services/groupService'
 
-function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers, className = '' }) {
+function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers, className = '', minimal = false }) {
   const [questionInput, setQuestionInput] = useState('')
   const [answerInput, setAnswerInput] = useState('')
   const [responseInput, setResponseInput] = useState('')
@@ -30,6 +30,8 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
       wrong: Number(row?.wrong || 0),
     }))
     .sort((a, b) => b.correct - a.correct || a.wrong - b.wrong)
+
+  const showCompactComposer = minimal && isCreator && isActive && !question?.prompt
 
   const showFeedback = (message) => {
     setFeedback(message)
@@ -117,7 +119,7 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
   }
 
   return (
-    <div className={`overflow-hidden rounded-2xl border border-white/15 bg-black/20 p-3 sm:p-4 ${className}`.trim()}>
+    <div className={`quiz-container ${className}`.trim()}>
       <div className="mb-4 flex items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-white/75">Quiz</p>
         <span className={`rounded-full px-2 py-1 text-[10px] ${isActive ? 'bg-emerald-300/20 text-emerald-100' : 'bg-white/10 text-white/65'}`}>
@@ -125,7 +127,7 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
         </span>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {isCreator && (
           <div className={`flex w-full flex-wrap gap-2 ${isActive ? 'justify-end' : 'justify-stretch'}`}>
             <button
@@ -134,7 +136,7 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
               disabled={Boolean(loading)}
               className={`rounded-full border text-white transition disabled:cursor-not-allowed disabled:opacity-55 ${
                 isActive
-                  ? 'border-white/20 bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20'
+                  ? `border-white/20 bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 ${minimal ? 'hidden' : ''}`
                   : 'w-full border-white/35 bg-white/20 px-5 py-2.5 text-sm font-bold tracking-wide hover:bg-white/30'
               }`}
             >
@@ -145,7 +147,7 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
                   : 'Start Quiz'}
             </button>
 
-            {isActive && (
+            {isActive && !minimal && (
               <button
                 type="button"
                 onClick={() => setShowComposer((value) => !value)}
@@ -157,8 +159,8 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
           </div>
         )}
 
-        {isCreator && isActive && (showComposer || !question?.prompt) && (
-          <div className="space-y-3 rounded-xl bg-white/5 p-4">
+        {isCreator && isActive && !minimal && (showComposer || !question?.prompt) && (
+          <div className="space-y-3">
             <input
               value={questionInput}
               onChange={(event) => setQuestionInput(event.target.value)}
@@ -184,8 +186,33 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
           </div>
         )}
 
+        {showCompactComposer && (
+          <div className="space-y-3">
+            <input
+              value={questionInput}
+              onChange={(event) => setQuestionInput(event.target.value)}
+              className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white"
+              placeholder="Question"
+            />
+            <input
+              value={answerInput}
+              onChange={(event) => setAnswerInput(event.target.value)}
+              className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white"
+              placeholder="Correct answer"
+            />
+            <button
+              type="button"
+              onClick={handleSetQuestion}
+              disabled={Boolean(loading)}
+              className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {loading === 'question' ? 'Saving...' : 'Set Question'}
+            </button>
+          </div>
+        )}
+
         {isActive && question?.prompt && !alreadyAnsweredCurrent && (
-          <form onSubmit={handleSubmitAnswer} className="space-y-4 rounded-xl border border-white/15 bg-white/5 p-4">
+          <form onSubmit={handleSubmitAnswer} className="space-y-3">
             <div className="text-base font-medium leading-relaxed text-white">{question.prompt}</div>
             <input
               value={responseInput}
@@ -197,7 +224,7 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
             <button
               type="submit"
               disabled={alreadyAnsweredCurrent || loading === 'answer'}
-              className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-55"
+              className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-55"
             >
               {loading === 'answer' ? 'Submitting...' : 'Submit'}
             </button>
@@ -205,17 +232,17 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
         )}
 
         {isActive && question?.prompt && alreadyAnsweredCurrent && (
-          <p className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white/80">
+          <p className="text-xs text-white/80">
             Answer submitted {userResponse?.isCorrect === true ? '(Correct)' : userResponse?.isCorrect === false ? '(Wrong)' : ''}
           </p>
         )}
 
-        {participantResults.length > 0 && (
-          <div className="rounded-xl bg-white/5 p-4">
-            <p className="mb-2 text-[11px] uppercase tracking-wide text-white/60">Participant Results</p>
-            <div className="space-y-2">
+        {participantResults.length > 0 && !minimal && (
+          <div>
+            <p className="mb-1 text-[11px] uppercase tracking-wide text-white/60">Participant Results</p>
+            <div className="space-y-1">
               {participantResults.map((row) => (
-                <div key={row.userId} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs text-white sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                <div key={row.userId} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs text-white sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <span className="truncate text-white/85">{row.name}</span>
                   <span className="whitespace-nowrap text-emerald-100">{row.correct} correct</span>
                   <span className="whitespace-nowrap text-rose-100">{row.wrong} wrong</span>
@@ -223,6 +250,12 @@ function QuizModePanel({ groupId, quizState, isCreator, currentUser, activeUsers
               ))}
             </div>
           </div>
+        )}
+
+        {participantResults.length > 0 && minimal && (
+          <p className="text-xs text-white/80">
+            Results: {participantResults.slice(0, 3).map((row) => `${row.name} (${row.correct}/${row.wrong})`).join(' • ')}
+          </p>
         )}
 
         {feedback && <p className="text-xs text-white/70">{feedback}</p>}

@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Confetti from 'react-confetti'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import CompletionModal from './CompletionModal'
 import ConfirmationModal from './ConfirmationModal'
 import QuizModePanel from './QuizModePanel'
@@ -385,7 +385,7 @@ const GroupSidePanel = memo(function GroupSidePanel({
           </div>
         )}
 
-        <div ref={quizSectionRef} className={`rounded-2xl bg-black/20 p-3 sm:p-4 xl:hidden ${showQuizOnly ? 'flex-1' : ''}`}>
+        <div ref={quizSectionRef} className={`xl:hidden ${showQuizOnly ? 'flex-1' : ''}`}>
           <QuizModePanel
             className={showQuizOnly ? 'h-full' : ''}
             groupId={groupId}
@@ -529,6 +529,11 @@ function SessionView() {
   const [reactingMessageId, setReactingMessageId] = useState('')
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
   const [mobilePanelFocusQuiz, setMobilePanelFocusQuiz] = useState(false)
+  const [compactTab, setCompactTab] = useState('chat')
+  const [mobileSheet, setMobileSheet] = useState(null)
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window === 'undefined' ? 1280 : window.innerWidth,
+  )
   const [copiedCode, setCopiedCode] = useState(false)
   const chatEndRef = useRef(null)
   const notificationAudioRef = useRef(null)
@@ -538,6 +543,31 @@ function SessionView() {
   const progressLabel = useMemo(() => `${Math.round(progress * 100)}%`, [progress])
   const isGroupSession = sessionMode === 'group' && Boolean(currentGroupId)
   const currentGroupSessionId = usePomodoroStore((state) => state.currentGroupSessionId)
+  const isCompactView = viewportWidth <= 1024
+  const isTabletView = viewportWidth >= 768 && viewportWidth <= 1024
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    if (!isCompactView) {
+      setMobileSheet(null)
+    }
+  }, [isCompactView])
+
+  useEffect(() => {
+    if (!isCompactView || !mobileSheet) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isCompactView, mobileSheet])
 
   useEffect(() => {
     if (!isGroupSession) {
@@ -892,6 +922,106 @@ function SessionView() {
     await endGroupSessionAsCreator()
   }
 
+  const compactParticipants = activeUsers.slice(0, 4)
+  const compactExtraCount = Math.max(0, activeUsers.length - compactParticipants.length)
+  const compactFocusLabel = `${activeCount} ${activeCount === 1 ? 'person' : 'people'} focusing`
+  const compactChatFileInputId = 'compact-chat-file'
+
+  const renderCompactChatPanel = ({ fullscreen = false } = {}) => (
+    <div className={`flex min-h-0 flex-col rounded-xl border border-white/15 bg-black/20 ${fullscreen ? 'h-screen min-h-screen' : 'h-full'}`}>
+      <div className="chat-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-3">
+        <ChatMessagesList
+          messages={displayedChatMessages}
+          currentUserId={userProfile?.id || ''}
+          onReactToMessage={handleReactToMessage}
+          onDownloadFile={handleDownloadFile}
+          reactingMessageId={reactingMessageId}
+          chatEndRef={chatEndRef}
+        />
+      </div>
+      <div className="sticky bottom-0 z-10 border-t border-white/10 bg-black/60 px-3 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] backdrop-blur-md">
+        <form onSubmit={handleChatSubmit} className="w-full">
+          <input
+            id={compactChatFileInputId}
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.txt"
+            onChange={handlePickFile}
+            className="hidden"
+          />
+
+          <div className="flex w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-1.5">
+            <label
+              htmlFor={compactChatFileInputId}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center text-white/85 transition hover:text-white ${
+                isUploadingFile ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+              }`}
+              title="Attach file"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 3v12" />
+                <path d="m17 8-5-5-5 5" />
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              </svg>
+            </label>
+
+            <input
+              value={chatInput}
+              onChange={handleChatInputChange}
+              onKeyDown={handleChatInputKeyDown}
+              placeholder="Type a message..."
+              className={`min-w-0 flex-1 bg-transparent px-1 text-sm text-white placeholder:text-white/55 focus:outline-none ${
+                isSendingMessage ? 'opacity-80' : 'opacity-100'
+              }`}
+            />
+
+            <button
+              type="button"
+              onClick={handleSendMessage}
+              disabled={!chatInput.trim() || isSendingMessage}
+              aria-label="Send message"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/85 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {isSendingMessage ? (
+                <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              ) : (
+                <span aria-hidden="true" className="text-sm">➤</span>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {(isUploadingFile || chatFeedback) && (
+          <p className="mt-2 text-[11px] text-white/70">
+            {isUploadingFile ? `Uploading... ${uploadProgress}%` : chatFeedback}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+
+  const compactQuizPanel = (
+    <QuizModePanel
+      minimal
+      className="h-full"
+      groupId={currentGroupId}
+      quizState={quizState}
+      isCreator={isCreator}
+      currentUser={userProfile}
+      activeUsers={activeUsers}
+    />
+  )
+
   return (
     <section className={`theme-${selectedSound} relative min-h-dvh overflow-x-hidden bg-cover bg-center`}>
       <ThemeVideoBackground themeId={selectedSound} overlayClassName="bg-black/55 backdrop-blur-sm" />
@@ -906,215 +1036,425 @@ function SessionView() {
         />
       )}
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative z-10 min-h-dvh px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-5 lg:h-dvh lg:overflow-hidden"
-      >
-        <div className="mx-auto flex min-h-full w-full max-w-440 gap-3 lg:h-full lg:gap-4 lg:overflow-hidden xl:gap-5">
-          {isGroupSession && (
-            <div className="hidden h-full min-h-0 xl:block">
-              <LeftCollabPanel
-                groupId={currentGroupId}
-                quizState={quizState}
-                isCreator={isCreator}
-                currentUser={userProfile}
-                activeUsers={activeUsers}
-              />
-            </div>
-          )}
-
-          <div className="flex min-w-0 flex-1 flex-col gap-3 lg:justify-between lg:gap-0 lg:overflow-hidden">
-            <div className="glass-panel mobile-contrast-panel shrink-0 rounded-3xl border border-white/15 px-4 py-3 shadow-lg sm:px-5 sm:py-4 md:px-6 md:py-5">
-              <p className="text-xs uppercase tracking-wide text-purple-200">Progress</p>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/20">
-                  <div
-                    className="h-full rounded-full transition-[width,background-color] duration-700"
-                    style={{
-                      width: progressLabel,
-                      backgroundImage: 'linear-gradient(to right, #bfa4ff, #7f99ec)',
-                    }}
-                  />
+      {isCompactView ? (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="relative z-10 min-h-dvh px-4 pt-4 pb-26"
+          >
+            <div className="mx-auto flex min-h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col gap-4">
+              <div className="glass-panel mobile-contrast-panel rounded-xl p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/20">
+                    <div
+                      className="h-full rounded-full transition-[width,background-color] duration-700"
+                      style={{
+                        width: progressLabel,
+                        backgroundImage: 'linear-gradient(to right, #bfa4ff, #7f99ec)',
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm font-semibold text-purple-200">{progressLabel}</p>
                 </div>
-                <p className="text-sm font-semibold text-purple-200">{progressLabel}</p>
-              </div>
-              <motion.p
-                key={motivationLine}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
-                className="mt-3 text-center text-base leading-relaxed text-white sm:text-lg md:text-xl"
-              >
-                {motivationLine}
-              </motion.p>
-
-              {isGroupSession && (
-                <div className="mt-3 rounded-2xl border border-emerald-200/20 bg-emerald-300/8 px-3 py-2 text-sm text-emerald-100">
-                  <p>{activeCount} people focusing right now.</p>
-                  {!currentUserActive && <p className="mt-1 text-amber-100">{userProfile.name || 'You'} are warming up...</p>}
-                  {activeCount >= 2 && <p className="mt-1">Most people in your group are still going.</p>}
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-1 items-center justify-center py-1.5 sm:py-2 md:py-3">
-              <TimerCircle
-                remainingSeconds={remainingSeconds}
-                progress={progress}
-                accentColor="#b8a2ff"
-                glowColor="var(--accent-soft)"
-              />
-            </div>
-
-            <div className="glass-panel mobile-contrast-panel shrink-0 rounded-3xl border border-white/10 px-3 py-3 shadow-lg sm:px-4 md:px-6 md:py-4">
-              <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:justify-center sm:overflow-visible sm:whitespace-normal sm:pb-0 md:gap-2.5">
-                {status === 'running' ? (
-                  <button
-                    type="button"
-                    onClick={pauseSession}
-                    className="glass-button h-8 shrink-0 px-3 py-1 text-xs sm:h-auto sm:py-1.5 sm:text-sm"
-                  >
-                    Pause
-                  </button>
-                ) : status === 'paused' ? (
-                  <button
-                    type="button"
-                    onClick={resumeSession}
-                    className="glass-button h-8 shrink-0 border-white/35 bg-white/16 px-3 py-1 text-xs shadow-[0_0_14px_var(--accent-soft)] sm:h-auto sm:py-1.5 sm:text-sm"
-                  >
-                    Resume
-                  </button>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={handleTryQuit}
-                  className="glass-button h-8 shrink-0 px-3 py-1 text-xs sm:h-auto sm:py-1.5 sm:text-sm"
-                >
-                  Stop
-                </button>
-
-                {isGroupSession && isCreator && (
-                  <button
-                    type="button"
-                    onClick={handleEndSession}
-                    className="glass-button h-8 shrink-0 border-rose-200/45 bg-rose-300/20 px-3 py-1 text-xs text-rose-100 sm:h-auto sm:py-1.5 sm:text-sm"
-                  >
-                    End Session
-                  </button>
-                )}
+                <p className="mt-2 text-center text-sm text-white sm:text-base">{motivationLine}</p>
 
                 {isGroupSession && (
+                  <>
+                    <div className="mt-3 flex items-center gap-2 overflow-x-auto">
+                      {compactParticipants.map((participant) => (
+                        <div key={participant.userId} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
+                          {initialsFromName(participant.name || participant.username || '')}
+                        </div>
+                      ))}
+                      {compactExtraCount > 0 && (
+                        <div className="flex h-7 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 px-2 text-[11px] text-white/85">
+                          +{compactExtraCount}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs text-white">
+                      <span className="truncate">Code: {inviteCode}</span>
+                      <button type="button" onClick={handleCopyCode} className="shrink-0 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[11px] text-white">
+                        Copy
+                      </button>
+                    </div>
+                    {copiedCode && <p className="mt-1 text-[11px] text-emerald-200">Copied!</p>}
+                  </>
+                )}
+              </div>
+
+              <div className={`min-h-0 flex-1 ${isTabletView && isGroupSession ? 'grid grid-cols-2 gap-4' : 'flex flex-col'}`}>
+                <div className="glass-panel mobile-contrast-panel flex min-h-88 flex-1 flex-col items-center justify-center rounded-2xl p-4">
+                  <TimerCircle
+                    remainingSeconds={remainingSeconds}
+                    progress={progress}
+                    accentColor="#b8a2ff"
+                    glowColor="var(--accent-soft)"
+                  />
+                  {isGroupSession && <p className="mt-3 text-xs text-white/80">{compactFocusLabel}</p>}
+                </div>
+
+                {isTabletView && isGroupSession && (
+                  <div className="glass-panel mobile-contrast-panel flex min-h-0 flex-col gap-3 rounded-2xl p-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCompactTab('chat')}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${compactTab === 'chat' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'}`}
+                      >
+                        Chat
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCompactTab('quiz')}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${compactTab === 'quiz' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'}`}
+                      >
+                        Quiz
+                      </button>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      {compactTab === 'chat' ? renderCompactChatPanel() : compactQuizPanel}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="mobile-sheet fixed bottom-0 left-0 right-0 z-30 px-4 pb-3">
+            <div className="mx-auto w-full max-w-5xl">
+              <div className="glass-panel mobile-contrast-panel rounded-full border border-white/15 px-2 py-2 backdrop-blur-xl">
+                <div className="grid grid-cols-4 gap-2">
                   <button
                     type="button"
+                    onClick={status === 'running' ? pauseSession : resumeSession}
+                    className="rounded-full bg-white/15 px-2 py-1.5 text-xs font-semibold text-white"
+                  >
+                    {status === 'running' ? 'Pause' : 'Resume'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTryQuit}
+                    className="rounded-full bg-white/15 px-2 py-1.5 text-xs font-semibold text-white"
+                  >
+                    End
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!isGroupSession}
                     onClick={() => {
-                      setMobilePanelFocusQuiz(true)
-                      setMobilePanelOpen(true)
+                      if (isTabletView) {
+                        setCompactTab('quiz')
+                        return
+                      }
+                      setMobileSheet('quiz')
                     }}
-                    className="glass-button h-8 shrink-0 px-3 py-1 text-xs lg:hidden sm:h-auto sm:py-1.5 sm:text-sm"
+                    className="rounded-full bg-white/15 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-45"
                   >
                     Quiz
                   </button>
-                )}
-
-                {isGroupSession && (
                   <button
                     type="button"
+                    disabled={!isGroupSession}
                     onClick={() => {
-                      setMobilePanelFocusQuiz(false)
-                      setMobilePanelOpen(true)
+                      if (isTabletView) {
+                        setCompactTab('chat')
+                        return
+                      }
+                      setMobileSheet('chat')
                     }}
-                    className="glass-button h-8 shrink-0 px-3 py-1 text-xs lg:hidden sm:h-auto sm:py-1.5 sm:text-sm"
+                    className="rounded-full bg-white/15 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-45"
                   >
                     Chat
                   </button>
-                )}
+                </div>
               </div>
             </div>
           </div>
 
-          {isGroupSession && (
-            <div className="hidden h-full min-h-0 lg:block">
-              <GroupSidePanel
-                groupId={currentGroupId}
-                quizState={quizState}
-                isCreator={isCreator}
-                groupName={groupData?.name}
-                inviteCode={inviteCode}
-                copiedCode={copiedCode}
-                onCopyCode={handleCopyCode}
-                inviteLink={inviteLink}
-                activeUsers={activeUsers}
-                activeCount={activeCount}
-                chatMessages={displayedChatMessages}
-                chatInput={chatInput}
-                onChatInputChange={handleChatInputChange}
-                onSendMessage={handleSendMessage}
-                onChatSubmit={handleChatSubmit}
-                onChatInputKeyDown={handleChatInputKeyDown}
-                onPickFile={handlePickFile}
-                isSendingMessage={isSendingMessage}
-                isUploadingFile={isUploadingFile}
-                uploadProgress={uploadProgress}
-                chatFeedback={chatFeedback}
-                currentUser={userProfile}
-                onReactToMessage={handleReactToMessage}
-                onDownloadFile={handleDownloadFile}
-                reactingMessageId={reactingMessageId}
-                focusQuiz={false}
-                chatEndRef={chatEndRef}
+          {!isTabletView && isGroupSession && (
+            <AnimatePresence>
+              {mobileSheet === 'quiz' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-40 bg-black/65 backdrop-blur-sm"
+                >
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ duration: 0.24, ease: 'easeOut' }}
+                    className="mobile-sheet absolute inset-x-0 bottom-0 h-[88dvh] rounded-t-3xl p-3"
+                  >
+                    <div className="glass-panel mobile-contrast-panel flex h-full min-h-0 flex-col rounded-2xl p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-sm font-semibold text-white">Quiz</p>
+                        <button
+                          type="button"
+                          onClick={() => setMobileSheet(null)}
+                          className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white"
+                        >
+                          Close
+                        </button>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-y-auto">{compactQuizPanel}</div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {mobileSheet === 'chat' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-40 bg-black/65 backdrop-blur-sm"
+                >
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ duration: 0.24, ease: 'easeOut' }}
+                    className="mobile-sheet absolute inset-0 h-screen p-3"
+                  >
+                    <div className="glass-panel mobile-contrast-panel flex h-full min-h-0 flex-col rounded-2xl p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => setMobileSheet(null)}
+                          className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white"
+                        >
+                          Back
+                        </button>
+                        <p className="text-sm font-semibold text-white">Live Chat</p>
+                        <span className="w-12" />
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-hidden">{renderCompactChatPanel()}</div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+        </>
+      ) : (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="relative z-10 min-h-dvh px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-5 lg:h-dvh lg:overflow-hidden"
+          >
+            <div className="mx-auto flex min-h-full w-full max-w-440 gap-3 lg:h-full lg:gap-4 lg:overflow-hidden xl:gap-5">
+              {isGroupSession && (
+                <div className="hidden h-full min-h-0 xl:block">
+                  <LeftCollabPanel
+                    groupId={currentGroupId}
+                    quizState={quizState}
+                    isCreator={isCreator}
+                    currentUser={userProfile}
+                    activeUsers={activeUsers}
+                  />
+                </div>
+              )}
+
+              <div className="flex min-w-0 flex-1 flex-col gap-3 lg:justify-between lg:gap-0 lg:overflow-hidden">
+                <div className="glass-panel mobile-contrast-panel shrink-0 rounded-3xl border border-white/15 px-4 py-3 shadow-lg sm:px-5 sm:py-4 md:px-6 md:py-5">
+                  <p className="text-xs uppercase tracking-wide text-purple-200">Progress</p>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/20">
+                      <div
+                        className="h-full rounded-full transition-[width,background-color] duration-700"
+                        style={{
+                          width: progressLabel,
+                          backgroundImage: 'linear-gradient(to right, #bfa4ff, #7f99ec)',
+                        }}
+                      />
+                    </div>
+                    <p className="text-sm font-semibold text-purple-200">{progressLabel}</p>
+                  </div>
+                  <motion.p
+                    key={motivationLine}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="mt-3 text-center text-base leading-relaxed text-white sm:text-lg md:text-xl"
+                  >
+                    {motivationLine}
+                  </motion.p>
+
+                  {isGroupSession && (
+                    <div className="mt-3 rounded-2xl border border-emerald-200/20 bg-emerald-300/8 px-3 py-2 text-sm text-emerald-100">
+                      <p>{activeCount} people focusing right now.</p>
+                      {!currentUserActive && <p className="mt-1 text-amber-100">{userProfile.name || 'You'} are warming up...</p>}
+                      {activeCount >= 2 && <p className="mt-1">Most people in your group are still going.</p>}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-1 items-center justify-center py-1.5 sm:py-2 md:py-3">
+                  <TimerCircle
+                    remainingSeconds={remainingSeconds}
+                    progress={progress}
+                    accentColor="#b8a2ff"
+                    glowColor="var(--accent-soft)"
+                  />
+                </div>
+
+                <div className="glass-panel mobile-contrast-panel shrink-0 rounded-3xl border border-white/10 px-3 py-3 shadow-lg sm:px-4 md:px-6 md:py-4">
+                  <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:justify-center sm:overflow-visible sm:whitespace-normal sm:pb-0 md:gap-2.5">
+                    {status === 'running' ? (
+                      <button
+                        type="button"
+                        onClick={pauseSession}
+                        className="glass-button h-8 shrink-0 px-3 py-1 text-xs sm:h-auto sm:py-1.5 sm:text-sm"
+                      >
+                        Pause
+                      </button>
+                    ) : status === 'paused' ? (
+                      <button
+                        type="button"
+                        onClick={resumeSession}
+                        className="glass-button h-8 shrink-0 border-white/35 bg-white/16 px-3 py-1 text-xs shadow-[0_0_14px_var(--accent-soft)] sm:h-auto sm:py-1.5 sm:text-sm"
+                      >
+                        Resume
+                      </button>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={handleTryQuit}
+                      className="glass-button h-8 shrink-0 px-3 py-1 text-xs sm:h-auto sm:py-1.5 sm:text-sm"
+                    >
+                      Stop
+                    </button>
+
+                    {isGroupSession && isCreator && (
+                      <button
+                        type="button"
+                        onClick={handleEndSession}
+                        className="glass-button h-8 shrink-0 border-rose-200/45 bg-rose-300/20 px-3 py-1 text-xs text-rose-100 sm:h-auto sm:py-1.5 sm:text-sm"
+                      >
+                        End Session
+                      </button>
+                    )}
+
+                    {isGroupSession && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobilePanelFocusQuiz(true)
+                          setMobilePanelOpen(true)
+                        }}
+                        className="glass-button h-8 shrink-0 px-3 py-1 text-xs lg:hidden sm:h-auto sm:py-1.5 sm:text-sm"
+                      >
+                        Quiz
+                      </button>
+                    )}
+
+                    {isGroupSession && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobilePanelFocusQuiz(false)
+                          setMobilePanelOpen(true)
+                        }}
+                        className="glass-button h-8 shrink-0 px-3 py-1 text-xs lg:hidden sm:h-auto sm:py-1.5 sm:text-sm"
+                      >
+                        Chat
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {isGroupSession && (
+                <div className="hidden h-full min-h-0 lg:block">
+                  <GroupSidePanel
+                    groupId={currentGroupId}
+                    quizState={quizState}
+                    isCreator={isCreator}
+                    groupName={groupData?.name}
+                    inviteCode={inviteCode}
+                    copiedCode={copiedCode}
+                    onCopyCode={handleCopyCode}
+                    inviteLink={inviteLink}
+                    activeUsers={activeUsers}
+                    activeCount={activeCount}
+                    chatMessages={displayedChatMessages}
+                    chatInput={chatInput}
+                    onChatInputChange={handleChatInputChange}
+                    onSendMessage={handleSendMessage}
+                    onChatSubmit={handleChatSubmit}
+                    onChatInputKeyDown={handleChatInputKeyDown}
+                    onPickFile={handlePickFile}
+                    isSendingMessage={isSendingMessage}
+                    isUploadingFile={isUploadingFile}
+                    uploadProgress={uploadProgress}
+                    chatFeedback={chatFeedback}
+                    currentUser={userProfile}
+                    onReactToMessage={handleReactToMessage}
+                    onDownloadFile={handleDownloadFile}
+                    reactingMessageId={reactingMessageId}
+                    focusQuiz={false}
+                    chatEndRef={chatEndRef}
+                  />
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {isGroupSession && mobilePanelOpen && (
+            <div className="fixed inset-0 z-40 lg:hidden">
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/60"
+                onClick={() => {
+                  setMobilePanelOpen(false)
+                  setMobilePanelFocusQuiz(false)
+                }}
+                aria-label="Close group panel"
               />
+              <div className="mobile-sheet absolute bottom-0 left-0 right-0 h-[82dvh] rounded-t-3xl p-2.5 sm:h-[78dvh] sm:p-3">
+                <GroupSidePanel
+                  mobile
+                  groupId={currentGroupId}
+                  quizState={quizState}
+                  isCreator={isCreator}
+                  groupName={groupData?.name}
+                  inviteCode={inviteCode}
+                  copiedCode={copiedCode}
+                  onCopyCode={handleCopyCode}
+                  inviteLink={inviteLink}
+                  activeUsers={activeUsers}
+                  activeCount={activeCount}
+                  chatMessages={displayedChatMessages}
+                  chatInput={chatInput}
+                  onChatInputChange={handleChatInputChange}
+                  onSendMessage={handleSendMessage}
+                  onChatSubmit={handleChatSubmit}
+                  onChatInputKeyDown={handleChatInputKeyDown}
+                  onPickFile={handlePickFile}
+                  isSendingMessage={isSendingMessage}
+                  isUploadingFile={isUploadingFile}
+                  uploadProgress={uploadProgress}
+                  chatFeedback={chatFeedback}
+                  currentUser={userProfile}
+                  onReactToMessage={handleReactToMessage}
+                  onDownloadFile={handleDownloadFile}
+                  reactingMessageId={reactingMessageId}
+                  focusQuiz={mobilePanelFocusQuiz}
+                  chatEndRef={chatEndRef}
+                />
+              </div>
             </div>
           )}
-        </div>
-      </motion.div>
-
-      {isGroupSession && mobilePanelOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60"
-            onClick={() => {
-              setMobilePanelOpen(false)
-              setMobilePanelFocusQuiz(false)
-            }}
-            aria-label="Close group panel"
-          />
-          <div className="mobile-sheet absolute bottom-0 left-0 right-0 h-[82dvh] rounded-t-3xl p-2.5 sm:h-[78dvh] sm:p-3">
-            <GroupSidePanel
-              mobile
-              groupId={currentGroupId}
-              quizState={quizState}
-              isCreator={isCreator}
-              groupName={groupData?.name}
-              inviteCode={inviteCode}
-              copiedCode={copiedCode}
-              onCopyCode={handleCopyCode}
-              inviteLink={inviteLink}
-              activeUsers={activeUsers}
-              activeCount={activeCount}
-              chatMessages={displayedChatMessages}
-              chatInput={chatInput}
-              onChatInputChange={handleChatInputChange}
-              onSendMessage={handleSendMessage}
-              onChatSubmit={handleChatSubmit}
-              onChatInputKeyDown={handleChatInputKeyDown}
-              onPickFile={handlePickFile}
-              isSendingMessage={isSendingMessage}
-              isUploadingFile={isUploadingFile}
-              uploadProgress={uploadProgress}
-              chatFeedback={chatFeedback}
-              currentUser={userProfile}
-              onReactToMessage={handleReactToMessage}
-              onDownloadFile={handleDownloadFile}
-              reactingMessageId={reactingMessageId}
-              focusQuiz={mobilePanelFocusQuiz}
-              chatEndRef={chatEndRef}
-            />
-          </div>
-        </div>
+        </>
       )}
 
       <ConfirmationModal
