@@ -14,7 +14,6 @@ const firebaseConfig = {
 const hasFirebaseConfig = [
   firebaseConfig.apiKey,
   firebaseConfig.projectId,
-  firebaseConfig.storageBucket,
   firebaseConfig.messagingSenderId,
   firebaseConfig.appId,
 ].every(Boolean)

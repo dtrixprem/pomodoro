@@ -437,10 +437,14 @@ export const usePomodoroStore = create(
         const hydrated = { ...currentState, ...(persistedState || {}) }
         const persistedProfile = hydrated.userProfile || {}
         const nameFromLegacy = persistedProfile.name || persistedProfile.username || ''
+        const isSessionStatus = ['running', 'paused', 'completed'].includes(hydrated.status)
+        const nextActiveView = isSessionStatus
+          ? 'session'
+          : hydrated.activeView || 'setup'
 
         return {
           ...hydrated,
-          activeView: 'setup',
+          activeView: nextActiveView,
           userProfile: {
             id: persistedProfile.id || createUserId(),
             name: String(nameFromLegacy || '').slice(0, 24),

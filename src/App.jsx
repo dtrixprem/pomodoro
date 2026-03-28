@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import GroupPage from './components/GroupPage'
 import SessionView from './components/SessionView'
 import TimeSetup from './components/TimeSetup'
-import { useAmbientSound } from './hooks/useAmbientSound'
 import { useTimerEngine } from './hooks/useTimerEngine'
 import { usePomodoroStore } from './store/usePomodoroStore'
 
@@ -11,7 +10,6 @@ function App() {
   const joinStudyGroup = usePomodoroStore((state) => state.joinStudyGroup)
 
   useTimerEngine()
-  useAmbientSound()
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)

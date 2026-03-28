@@ -7,6 +7,8 @@ This project extends the original timer app into a group study platform with:
 - synced group sessions (MVP realtime model with shared running sessions)
 - daily/weekly/all-time leaderboard
 - XP rewards (+25 base + streak bonus)
+- in-session file sharing (Cloudinary unsigned upload)
+- optional group quiz mode (creator-controlled)
 
 ## Run Locally
 
@@ -16,22 +18,24 @@ This project extends the original timer app into a group study platform with:
 npm install
 ```
 
-2. Add Firebase environment values in a local `.env` file:
+2. Create a local `.env` file from `.env.example`:
 
 ```bash
-VITE_FIREBASE_API_KEY=AIzaSyAwBIoXT9mMrSGfa9zRLZH9nWqofxIgs0M
-VITE_FIREBASE_AUTH_DOMAIN=pomodorommw.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=pomodorommw
-VITE_FIREBASE_STORAGE_BUCKET=pomodorommw.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=229859222466
-VITE_FIREBASE_APP_ID=1:229859222466:web:b9ddc2f03076ad26386c5b
-VITE_FIREBASE_MEASUREMENT_ID=G-VVMQEDJZ90
+cp .env.example .env
 ```
+
+Then fill the placeholder values in `.env` with your own project configuration.
 
 3. Start development server:
 
 ```bash
 npm run dev
+```
+
+4. Open the app using:
+
+```bash
+http://127.0.0.1:5173
 ```
 
 ## Firebase Integration (MVP)
@@ -103,3 +107,19 @@ Included models:
 
 - If Firebase env values are missing, group operations will show a clear runtime error message.
 - Invite links use this pattern: `/join?group=ABC123`.
+- Do not commit `.env` or any file containing real keys/tokens.
+
+## Cloudinary Upload Setup
+
+To use file sharing without Firebase Storage billing:
+
+1. Create a Cloudinary account and open your product environment.
+2. Create an **unsigned** upload preset (for example: `pomodoro_unsigned`).
+3. Add these env vars:
+
+```bash
+VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
+VITE_CLOUDINARY_UPLOAD_PRESET=your_unsigned_upload_preset
+```
+
+Security note: do not put `API Secret` in frontend code or env files used by Vite.
