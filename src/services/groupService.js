@@ -50,33 +50,7 @@ const ensureFirebase = () => {
   }
 }
 
-export const upsertUserProfile = async (user) => {
-  ensureFirebase()
-
-  const userRef = doc(db, 'users', user.id)
-  const snapshot = await getDoc(userRef)
-
-  if (!snapshot.exists()) {
-    await setDoc(userRef, {
-      id: user.id,
-      username: user.username,
-      photoURL: user.photoURL || '',
-      groupIds: [],
-      totalFocusMinutes: 0,
-      sessionsCompleted: 0,
-      xp: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    return
-  }
-
-  await updateDoc(userRef, {
-    username: user.username,
-    photoURL: user.photoURL || '',
-    updatedAt: serverTimestamp(),
-  })
-}
+const displayName = (user) => String(user?.name || user?.username || 'User').trim() || 'User'
 
 const addSystemMessage = async (groupId, text) => {
   await addDoc(collection(db, 'groupMessages'), {
@@ -89,6 +63,8 @@ const addSystemMessage = async (groupId, text) => {
 
 export const createGroup = async ({ name, admin }) => {
   ensureFirebase()
+
+  const adminName = displayName(admin)
 
   const groupId = randomCode(6)
   const groupRef = doc(db, 'groups', groupId)
@@ -104,7 +80,8 @@ export const createGroup = async ({ name, admin }) => {
       leaderboard: [
         {
           userId: admin.id,
-          username: admin.username,
+          name: adminName,
+          username: adminName,
           totalFocusMinutes: 0,
           sessionsCompleted: 0,
           xp: 0,
@@ -126,7 +103,8 @@ export const createGroup = async ({ name, admin }) => {
       userRef,
       {
         id: admin.id,
-        username: admin.username,
+        name: adminName,
+        username: adminName,
         groupIds: arrayUnion(groupId),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -143,6 +121,8 @@ export const createGroup = async ({ name, admin }) => {
 
 export const joinGroup = async ({ groupId, user }) => {
   ensureFirebase()
+
+  const userName = displayName(user)
 
   const groupRef = doc(db, 'groups', groupId)
   const userRef = doc(db, 'users', user.id)
@@ -168,7 +148,8 @@ export const joinGroup = async ({ groupId, user }) => {
             ...leaderboard,
             {
               userId: user.id,
-              username: user.username,
+              name: userName,
+              username: userName,
               totalFocusMinutes: 0,
               sessionsCompleted: 0,
               xp: 0,
@@ -182,7 +163,8 @@ export const joinGroup = async ({ groupId, user }) => {
       userRef,
       {
         id: user.id,
-        username: user.username,
+        name: userName,
+        username: userName,
         groupIds: arrayUnion(groupId),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -233,6 +215,8 @@ export const watchGroupSessions = (groupId, onData, onError) => {
 export const startGroupSession = async ({ groupId, user, durationMinutes }) => {
   ensureFirebase()
 
+  const userName = displayName(user)
+
   const sessionRef = doc(collection(db, 'sessions'))
   const groupRef = doc(db, 'groups', groupId)
 
@@ -246,7 +230,8 @@ export const startGroupSession = async ({ groupId, user, durationMinutes }) => {
       id: sessionRef.id,
       groupId,
       userId: user.id,
-      username: user.username,
+      name: userName,
+      username: userName,
       durationMinutes,
       startedAt: serverTimestamp(),
       completedAt: null,
@@ -292,6 +277,8 @@ export const endGroupSession = async ({ groupId }) => {
 export const joinSessionPresence = async ({ groupId, user, sessionId }) => {
   ensureFirebase()
 
+  const userName = displayName(user)
+
   const participantRef = doc(db, 'sessionParticipants', `${groupId}_${user.id}`)
   const existingSnapshot = await getDoc(participantRef)
 
@@ -299,8 +286,8 @@ export const joinSessionPresence = async ({ groupId, user, sessionId }) => {
     id: `${groupId}_${user.id}`,
     groupId,
     userId: user.id,
-    username: user.username,
-    photoURL: user.photoURL || '',
+    name: userName,
+    username: userName,
     sessionId,
     isActive: true,
     updatedAt: serverTimestamp(),
@@ -308,7 +295,7 @@ export const joinSessionPresence = async ({ groupId, user, sessionId }) => {
   })
 
   if (!existingSnapshot.exists()) {
-    await addSystemMessage(groupId, `${user.username} joined the session`)
+    await addSystemMessage(groupId, `${userName} joined the session`)
   }
 }
 
@@ -321,8 +308,8 @@ export const leaveSessionPresence = async ({ groupId, userId }) => {
 
   await deleteDoc(participantRef)
 
-  if (participantData?.username) {
-    await addSystemMessage(groupId, `${participantData.username} left the session`)
+  if (participantData?.name || participantData?.username) {
+    await addSystemMessage(groupId, `${participantData.name || participantData.username} left the session`)
   }
 
   const participantsQuery = query(
@@ -364,14 +351,16 @@ export const watchSessionParticipants = (groupId, onData, onError) => {
 export const sendGroupMessage = async ({ groupId, user, message }) => {
   ensureFirebase()
 
+  const userName = displayName(user)
+
   const text = String(message || '').trim()
   if (!text) return
 
   await addDoc(collection(db, 'groupMessages'), {
     groupId,
     userId: user.id,
-    username: user.username,
-    photoURL: user.photoURL || '',
+    name: userName,
+    username: userName,
     type: 'user',
     text,
     createdAt: serverTimestamp(),
@@ -411,6 +400,8 @@ export const completeGroupSession = async ({
 }) => {
   ensureFirebase()
 
+  const userName = displayName(user)
+
   const sessionRef = doc(db, 'sessions', sessionId)
   const groupRef = doc(db, 'groups', groupId)
   const userRef = doc(db, 'users', user.id)
@@ -443,7 +434,8 @@ export const completeGroupSession = async ({
         ? leaderboard[entryIndex]
         : {
             userId: user.id,
-            username: user.username,
+          name: userName,
+          username: userName,
             totalFocusMinutes: 0,
             sessionsCompleted: 0,
             xp: 0,
@@ -451,7 +443,8 @@ export const completeGroupSession = async ({
 
     const nextEntry = {
       ...baseEntry,
-      username: user.username,
+      name: userName,
+      username: userName,
       totalFocusMinutes: (baseEntry.totalFocusMinutes || 0) + durationMinutes,
       sessionsCompleted: (baseEntry.sessionsCompleted || 0) + 1,
       xp: (baseEntry.xp || 0) + xpEarned,
@@ -486,7 +479,8 @@ export const completeGroupSession = async ({
       userRef,
       {
         id: user.id,
-        username: user.username,
+        name: userName,
+        username: userName,
         totalFocusMinutes: (userData.totalFocusMinutes || 0) + durationMinutes,
         sessionsCompleted: (userData.sessionsCompleted || 0) + 1,
         xp: (userData.xp || 0) + xpEarned,

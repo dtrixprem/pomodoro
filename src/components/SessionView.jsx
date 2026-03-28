@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Confetti from 'react-confetti'
 import { motion } from 'framer-motion'
-import AuthQuickActions from './AuthQuickActions'
 import CompletionModal from './CompletionModal'
 import ConfirmationModal from './ConfirmationModal'
 import ThemeVideoBackground from './ThemeVideoBackground'
@@ -17,8 +16,7 @@ import { usePomodoroStore } from '../store/usePomodoroStore'
 const initialsFromName = (value = '') => {
   const parts = value.trim().split(/\s+/).filter(Boolean)
   if (!parts.length) return 'U'
-  if (parts.length === 1) return parts[0][0]?.toUpperCase() || 'U'
-  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
+  return parts[0][0]?.toUpperCase() || 'U'
 }
 
 const ParticipantsStrip = memo(function ParticipantsStrip({ activeUsers }) {
@@ -29,18 +27,14 @@ const ParticipantsStrip = memo(function ParticipantsStrip({ activeUsers }) {
   return (
     <ul className="flex gap-2 overflow-x-auto pb-1">
       {activeUsers.map((participant) => (
-        <li key={participant.userId} className="relative shrink-0" title={participant.username}>
-          {participant.photoURL ? (
-            <img
-              src={participant.photoURL}
-              alt={participant.username}
-              className="h-8 w-8 rounded-full border border-white/20 object-cover"
-            />
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/15 text-[10px] font-semibold text-white">
-              {initialsFromName(participant.username)}
-            </div>
-          )}
+        <li
+          key={participant.userId}
+          className="relative shrink-0"
+          title={participant.name || participant.username || 'User'}
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
+            {initialsFromName(participant.name || participant.username || '')}
+          </div>
           <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-400" />
         </li>
       ))}
@@ -55,19 +49,11 @@ const ChatMessageItem = memo(function ChatMessageItem({ message }) {
 
   return (
     <div className="flex items-start gap-2 min-w-0">
-      {message.photoURL ? (
-        <img
-          src={message.photoURL}
-          alt={message.username}
-          className="h-7 w-7 shrink-0 rounded-full object-cover"
-        />
-      ) : (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
-          {initialsFromName(message.username)}
-        </div>
-      )}
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
+        {initialsFromName(message.name || message.username || '')}
+      </div>
       <div className="min-w-0">
-        <p className="text-[11px] text-white/80">{message.username}</p>
+        <p className="text-[11px] text-white/80">{message.name || message.username || 'User'}</p>
         <p className="mt-1 wrap-break-word rounded-xl bg-white/10 px-3 py-2 text-xs text-white/95 backdrop-blur-md">
           {message.text}
         </p>
@@ -120,9 +106,6 @@ const GroupSidePanel = memo(function GroupSidePanel({
     >
       <div className="flex h-full min-h-0 flex-col gap-3">
         <div className="rounded-2xl border border-white/12 bg-black/20 p-3">
-          <div className="mb-2">
-            <AuthQuickActions compact />
-          </div>
           <p className="text-xs uppercase tracking-wide text-white/60">Group</p>
           <h3 className="text-base font-semibold text-white">{groupName || 'Focus Group'}</h3>
           <div className="mt-2 flex items-center gap-2">
@@ -374,7 +357,7 @@ function SessionView() {
               {isGroupSession && (
                 <div className="mt-3 rounded-2xl border border-emerald-200/20 bg-emerald-300/8 px-3 py-2 text-sm text-emerald-100">
                   <p>{activeCount} people focusing right now.</p>
-                  {!currentUserActive && <p className="mt-1 text-amber-100">{userProfile.username} is warming up...</p>}
+                  {!currentUserActive && <p className="mt-1 text-amber-100">{userProfile.name || 'You'} are warming up...</p>}
                   {activeCount >= 2 && <p className="mt-1">Most people in your group are still going.</p>}
                 </div>
               )}
@@ -415,14 +398,6 @@ function SessionView() {
                   className="glass-button text-sm"
                 >
                   Stop
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleTryQuit}
-                  className="glass-button text-sm"
-                >
-                  Back
                 </button>
 
                 {isGroupSession && isCreator && (

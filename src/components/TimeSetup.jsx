@@ -7,8 +7,8 @@ import { usePomodoroStore } from '../store/usePomodoroStore'
 const PRESETS = [25, 40, 60]
 
 function TimeSetup() {
-  const authUser = usePomodoroStore((state) => state.authUser)
-  const goToLanding = usePomodoroStore((state) => state.goToLanding)
+  const userProfile = usePomodoroStore((state) => state.userProfile)
+  const setUserName = usePomodoroStore((state) => state.setUserName)
   const durationMinutes = usePomodoroStore((state) => state.durationMinutes)
   const currentGroupId = usePomodoroStore((state) => state.currentGroupId)
   const createStudyGroup = usePomodoroStore((state) => state.createStudyGroup)
@@ -20,8 +20,19 @@ function TimeSetup() {
   const [sessionType, setSessionType] = useState('solo')
   const [groupName, setGroupName] = useState('Study Circle')
   const [joinCode, setJoinCode] = useState('')
+  const [showNameWarning, setShowNameWarning] = useState(false)
+
+  const trimmedName = String(userProfile?.name || '').trim()
+  const requiresGroupName = sessionType !== 'create-group' || String(groupName || '').trim()
+  const requiresJoinCode = sessionType !== 'join-group' || String(joinCode || '').trim()
+  const canStart = Boolean(trimmedName) && Boolean(requiresGroupName) && Boolean(requiresJoinCode)
 
   const handleStartSession = async () => {
+    if (!trimmedName) {
+      setShowNameWarning(true)
+      return
+    }
+
     let resolvedGroupId = currentGroupId
 
     if (sessionType === 'create-group') {
@@ -58,17 +69,6 @@ function TimeSetup() {
       style={{ backgroundImage }}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-      <button
-        type="button"
-        onClick={goToLanding}
-        aria-label="Back"
-        className="glass-button absolute left-4 top-4 z-20 h-9 w-9 p-0 text-sm md:left-6 md:top-6"
-      >
-        <svg viewBox="0 0 20 20" fill="none" className="mx-auto h-4 w-4" aria-hidden="true">
-          <path d="M12.5 4.5L7 10l5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -121,6 +121,21 @@ function TimeSetup() {
         <div className="glass-panel rounded-3xl p-8">
           <h3 className="text-2xl font-semibold text-white">Session Type</h3>
           <p className="mt-2 text-sm text-white/75">Choose how you want to focus today.</p>
+
+          <div className="mt-5">
+            <label className="text-xs uppercase tracking-wide text-white/70">Your Name</label>
+            <input
+              value={userProfile?.name || ''}
+              onChange={(event) => {
+                setUserName(event.target.value)
+                if (event.target.value.trim()) {
+                  setShowNameWarning(false)
+                }
+              }}
+              className="mt-2 w-full rounded-xl border border-white/20 bg-black/20 px-3 py-2 text-white"
+              placeholder="Enter your name"
+            />
+          </div>
 
           <div className="mt-5 space-y-3">
             <button
@@ -188,8 +203,8 @@ function TimeSetup() {
             <button
               type="button"
               onClick={handleStartSession}
-              disabled={!authUser && sessionType !== 'solo'}
-              className="cta-button w-full text-sm"
+              disabled={!canStart}
+              className="cta-button w-full text-sm disabled:cursor-not-allowed disabled:opacity-55"
             >
               {sessionType === 'solo'
                 ? 'Start Solo Session'
@@ -199,10 +214,8 @@ function TimeSetup() {
             </button>
           </div>
 
-          {!authUser && sessionType !== 'solo' && (
-            <p className="mt-3 text-sm text-amber-100">
-              Login with Google from the top-right profile button to use group sessions.
-            </p>
+          {!trimmedName && showNameWarning && (
+            <p className="mt-3 text-sm text-amber-100">Please enter your name to continue.</p>
           )}
 
           {collaborationError && <p className="mt-4 text-sm text-rose-200">{collaborationError}</p>}

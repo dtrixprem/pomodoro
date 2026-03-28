@@ -15,7 +15,7 @@ function MemberList({ members, activeUsers }) {
                 key={member.userId}
                 className="flex items-center justify-between rounded-xl border border-white/10 px-3 py-2"
               >
-                <span className="text-white/90">{member.username || member.userId}</span>
+                <span className="text-white/90">{member.name || member.username || member.userId}</span>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                     isActive ? 'bg-emerald-400/25 text-emerald-100' : 'bg-white/10 text-white/70'

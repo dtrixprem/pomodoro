@@ -20,13 +20,13 @@ export const buildLeaderboardByPeriod = (sessions, period = 'all') => {
     .forEach((session) => {
       const current = aggregate.get(session.userId) || {
         userId: session.userId,
-        username: session.username,
+        name: session.name || session.username,
         totalFocusMinutes: 0,
         sessionsCompleted: 0,
         xp: 0,
       }
 
-      current.username = session.username || current.username
+      current.name = session.name || session.username || current.name
       current.totalFocusMinutes += session.durationMinutes || 0
       current.sessionsCompleted += 1
       current.xp += session.xpEarned || 0

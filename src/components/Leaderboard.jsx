@@ -20,7 +20,7 @@ function Leaderboard({ rows, title }) {
               {rows.map((row, index) => (
                 <tr key={row.userId} className="border-t border-white/10">
                   <td className="py-2 pr-4 font-semibold text-white">#{index + 1}</td>
-                  <td className="py-2 pr-4 text-white/90">{row.username || row.userId}</td>
+                  <td className="py-2 pr-4 text-white/90">{row.name || row.username || row.userId}</td>
                   <td className="py-2 pr-4 text-white/90">{row.totalFocusMinutes}</td>
                   <td className="py-2 pr-4 text-white/90">{row.sessionsCompleted}</td>
                   <td className="py-2 text-white/90">{row.xp}</td>

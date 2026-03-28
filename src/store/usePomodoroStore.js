@@ -12,7 +12,6 @@ import {
   joinGroup,
   leaveSessionPresence,
   startGroupSession,
-  upsertUserProfile,
 } from '../services/groupService'
 import { clampProgress, getStageByProgress } from '../utils/stage'
 import { secondsFromMinutes } from '../utils/time'
@@ -20,8 +19,6 @@ import { secondsFromMinutes } from '../utils/time'
 const DEFAULT_MINUTES = 25
 const DAY_MS = 24 * 60 * 60 * 1000
 const DEFAULT_SOUND_ID = 'rain'
-
-const DEFAULT_USERNAME_PREFIX = 'Focus'
 
 const createUserId = () => {
   if (typeof crypto?.randomUUID === 'function') {
@@ -31,8 +28,6 @@ const createUserId = () => {
   const fallback = Math.floor(Math.random() * 100000)
   return `user_${Date.now()}_${fallback}`
 }
-
-const defaultUsername = () => `${DEFAULT_USERNAME_PREFIX}${Math.floor(100 + Math.random() * 900)}`
 
 const sanitizeSoundId = (soundId) => {
   if (AMBIENT_SOUNDS.some((sound) => sound.id === soundId)) {
@@ -74,12 +69,10 @@ const getStreakUpdate = (lastCompletedAt, currentStreak) => {
 export const usePomodoroStore = create(
   persist(
     (set, get) => ({
-      activeView: 'landing',
-      authUser: null,
+      activeView: 'setup',
       userProfile: {
         id: createUserId(),
-        username: defaultUsername(),
-        photoURL: '',
+        name: '',
       },
       currentGroupId: '',
       currentGroupName: '',
@@ -107,74 +100,20 @@ export const usePomodoroStore = create(
       lastTickAt: null,
       showCompletion: false,
 
-      setAuthUser: (authUser) => {
-        if (!authUser) {
-          set({ authUser: null })
-          return
-        }
-
+      setUserName: (name) => {
+        const nextName = String(name || '').slice(0, 24)
         set((state) => ({
-          authUser,
           userProfile: {
             ...state.userProfile,
-            id: authUser.uid,
-            username: authUser.name || authUser.email || state.userProfile.username,
-            photoURL: authUser.photoURL || '',
+            id: state.userProfile?.id || createUserId(),
+            name: nextName,
           },
+          collaborationError: '',
         }))
       },
 
-      clearAuthUser: () => {
-        set(() => ({
-          authUser: null,
-          userProfile: {
-            id: createUserId(),
-            username: defaultUsername(),
-            photoURL: '',
-          },
-        }))
-      },
-
-      setUsername: async (username) => {
-        const nextUsername = String(username || '').trim().slice(0, 24)
-        if (!nextUsername) return
-
-        const { userProfile } = get()
-        const nextUser = {
-          ...userProfile,
-          username: nextUsername,
-        }
-
-        set({ userProfile: nextUser, collaborationError: '' })
-
-        try {
-          await upsertUserProfile(nextUser)
-        } catch (error) {
-          set({ collaborationError: error?.message || 'Could not sync profile yet.' })
-        }
-      },
-
-      bootstrapUserProfile: async () => {
-        const { userProfile } = get()
-
-        if (!userProfile?.id) {
-          set({
-            userProfile: {
-              id: createUserId(),
-              username: defaultUsername(),
-              photoURL: '',
-            },
-          })
-        }
-
-        try {
-          await upsertUserProfile(get().userProfile)
-        } catch (error) {
-          set({ collaborationError: error?.message || 'Firebase profile sync is pending.' })
-        }
-      },
-
-      goToLanding: () => set({ activeView: 'landing' }),
+      // Backward compatibility for existing calls while moving to name-based identity.
+      setUsername: (name) => get().setUserName(name),
 
       goToSetup: () => set({ activeView: 'setup' }),
 
@@ -187,11 +126,11 @@ export const usePomodoroStore = create(
         const trimmedName = String(groupName || '').trim().slice(0, 40)
         if (!trimmedName) return null
 
-        const { authUser, userProfile } = get()
-        if (!authUser) {
+        const { userProfile } = get()
+        if (!String(userProfile?.name || '').trim()) {
           set({
             collaborationStatus: 'error',
-            collaborationError: 'Please login with Google to create or join group sessions.',
+            collaborationError: 'Please enter your name to continue.',
           })
           return null
         }
@@ -230,11 +169,11 @@ export const usePomodoroStore = create(
         const groupId = resolvedCode.toUpperCase()
         if (!groupId) return null
 
-        const { authUser, userProfile } = get()
-        if (!authUser) {
+        const { userProfile } = get()
+        if (!String(userProfile?.name || '').trim()) {
           set({
             collaborationStatus: 'error',
-            collaborationError: 'Please login with Google to create or join group sessions.',
+            collaborationError: 'Please enter your name to continue.',
           })
           return null
         }
@@ -282,14 +221,14 @@ export const usePomodoroStore = create(
       setVolume: (value) => set({ volume: Math.min(0.6, Math.max(0.4, value)) }),
 
       startSession: async ({ mode = 'solo', groupId = '' } = {}) => {
-        const { authUser, totalSeconds, durationMinutes, currentGroupId, userProfile } = get()
+        const { totalSeconds, durationMinutes, currentGroupId, userProfile } = get()
         const resolvedGroupId = groupId || currentGroupId
         let groupSessionId = ''
 
-        if (mode === 'group' && !authUser) {
+        if (!String(userProfile?.name || '').trim()) {
           set({
             collaborationStatus: 'error',
-            collaborationError: 'Please login with Google to create or join group sessions.',
+            collaborationError: 'Please enter your name to continue.',
           })
           return
         }
@@ -485,7 +424,6 @@ export const usePomodoroStore = create(
         lastTickAt: state.lastTickAt,
         showCompletion: state.showCompletion,
         userProfile: state.userProfile,
-        authUser: state.authUser,
         currentGroupId: state.currentGroupId,
         currentGroupName: state.currentGroupName,
         inviteLink: state.inviteLink,
@@ -495,6 +433,20 @@ export const usePomodoroStore = create(
         currentGroupSessionId: state.currentGroupSessionId,
         isGroupCreator: state.isGroupCreator,
       }),
+      merge: (persistedState, currentState) => {
+        const hydrated = { ...currentState, ...(persistedState || {}) }
+        const persistedProfile = hydrated.userProfile || {}
+        const nameFromLegacy = persistedProfile.name || persistedProfile.username || ''
+
+        return {
+          ...hydrated,
+          activeView: 'setup',
+          userProfile: {
+            id: persistedProfile.id || createUserId(),
+            name: String(nameFromLegacy || '').slice(0, 24),
+          },
+        }
+      },
     },
   ),
 )
